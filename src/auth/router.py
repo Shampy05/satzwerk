@@ -1,14 +1,10 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, status
 
 import src.auth.service as auth_service
 from src.auth.schemas import RegistrationData, RegistrationResponse, UserRegister
-from src.database import get_db
+from src.dependencies import DbDep
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
-DbDep = Annotated[AsyncSession, Depends(get_db)]
 
 
 @auth_router.post(
