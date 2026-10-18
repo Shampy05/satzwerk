@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+
+# Python caches & build artifacts
+__pycache__/
+*.py[ocd]
+build/
+dist/
+wheels/
+*.egg-info
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# Environment variables & secrets
+.env
+.env.*
+secrets.json
+
+# IDEs & OS files
+.DS_Store
+.zed/
+.vscode/
+.idea/
+
+# Local tools & scratch files
+.langgraph_api/
+scratch.py
+scratch/
+tests/
+Dockerfile
+docker-compose.yml
+README.md

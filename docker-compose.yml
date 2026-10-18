@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: satzwerk_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: satzwerk
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+  valkey:
+    image: valkey/valkey:7.2-alpine
+    container_name: satzwer_valkey
+    restart: always
+    ports:
+      - "6379:6379"
+  mailpit:
+    image: axllent/mailpit
+    container_name: satzwerk_mailpit
+    restart: always
+    ports:
+      - "1026:1025"
+      - "8025:8025"
+volumes:
+  postgres_data:

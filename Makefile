@@ -1,6 +1,7 @@
 .DEFAUL_GOAL := help
+MAILPIT_NAME := mailpit-scratch
 
-.PHONY: help sync lock add add-dev lint format format-check typecheck test coverage check clean build run
+.PHONY: help sync lock add add-dev lint format format-check typecheck test coverage check clean build run mail-start
 
 help: ## show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -61,6 +62,20 @@ migrate: ## Generate a new Alembic migration (usage: make migrate m="added chunk
 
 upgrade: ## Apply all pending database migrations to the database
 	uv run alembic upgrade head
+
+# ---- Mailpit ----
+
+mail-start: ## Start the mailpit container at port 1025
+	@docker run --rm -d \
+		--name $(MAILPIT_NAME) \
+		-p 1025:1025 \
+		-p 8025:8025 \
+		axllent/mailpit
+	@echo "Mailput running: SMTP on port 1025, Web UI at http://localhost:8025"
+
+mail-stop: ## Stop the mailpit container
+	@docker stop {MAILPIT_NAME} 2>/dev/null || null
+	@echo "Mailpit stopped"
 
 # ---- Testing ----
 
