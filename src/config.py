@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     EMAILS_FROM_EMAIL: str = "noreply@satzwerk.local"
 
     OPENAI_LLM_MODEL: str = "gpt-5-nano"
+    CRITIC_LLM_MODEL: str = "gpt-4o-mini"
     LLM_TEMPERATURE: float = 1.0
     AI_MAX_ITERATIONS: int = 3
 
