@@ -32,11 +32,17 @@ class Analysis(BaseModel):
     cards: list[GermanCard] = Field(
         description="List of error cards detected in the sentence"
     )
+    confirmed_hypotheses: list[str] = Field(
+        description="List of words marked with ? in the draft that are grammatically correct"
+    )
 
 
 class EnrichedAnalysis(BaseModel):
     cards: list[EnrichedGermanCard] = Field(
         description="List of all detected error cards with sentence indices"
+    )
+    confirmed_hypotheses: list[str] = Field(
+        description="List of words marked with ? in the draft that are grammatically correct"
     )
 
 

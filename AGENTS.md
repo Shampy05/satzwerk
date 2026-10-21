@@ -42,6 +42,10 @@ The core problem Satzwerk solves is bridging the gap between:
 7. **No Live As-You-Type Corrections**:
    Retrieval effort during full sentence drafting is the psychological mechanism. Feedback is generated only on submission.
 
+8. **Pienemann Stage vs. CEFR Grounding**:
+   - `stage` in `PatternMetadata` strictly reflects Manfred Pienemann's Processability Theory (1998) hierarchy (Stages 3–5) for syntactic constituent movement (`WO-SEP`, `WO-KLAM`, `WO-V2`, `WO-VF`, `PRO-REL`). Non-movement categories must remain `stage: None`.
+   - `cefr` in `PatternMetadata` systematically anchors all 24 codes to CEFR levels (`A1`, `A2`, `B1`, `B2`) based on *Profile deutsch* (Glaboniat et al., Goethe-Institut) and empirical learner corpus frequencies (MERLIN, Falko).
+
 ---
 
 ## 3. System Architecture
@@ -60,7 +64,8 @@ satzwerk/
 │   │   ├── graph.py                # Compiled StateGraph workflow
 │   │   ├── utils.py                # Deterministic sentence splitter & locator
 │   │   ├── service.py              # AIService graph execution bridge
-│   │   ├── router.py               # FastAPI endpoints (/ai/generate-card)
+│   │   ├── router.py               # FastAPI endpoints (/ai/analyze-draft, /ai/demo)
+│   │   ├── demo_html.py            # Standalone 5-rung HTML/Tailwind interactive test UI
 │   │   └── exceptions.py           # CardGenerationFailedException
 │   ├── auth/                       # Authentication, JWT, Valkey OTP, Users
 │   ├── config.py                   # Central Pydantic BaseSettings (.env loading)
@@ -125,9 +130,9 @@ If any check fails, it collects targeted feedback in `critiques` and loops strai
 
 ### Stage 2: The Cross-Family Semantic Critic Gate
 `semantic_evaluator` only executes after deterministic checks pass. Routed via `litellm.Router` using a second model (`CRITIC_LLM_MODEL`), it evaluates 3 criteria:
-1. **Inline Hypothesis Coverage (`?`)**: Verifies every uncertain word marked with inline `?` (e.g., `?zu den?`) was addressed in generated cards.
-2. **Taxonomy Code Accuracy (L3)**: Confirms `pattern_code` accurately matches the grammatical error between `quote` and `correction`.
-3. **No Stylistic False Positives**: Ensures no card flags valid German merely for stylistic preference.
+1. **Inline Hypothesis Coverage (`?`)**: Verifies every uncertain word marked with inline `?` (e.g., `?zu den?`) was properly handled: genuine errors produce an error card, whereas correct hypotheses (e.g., `?dem Mann?`) are confirmed in `confirmed_hypotheses` with zero cards.
+2. **Taxonomy Code Accuracy (L3)**: Confirms `pattern_code` accurately matches the grammatical error between `quote` and `correction` using the 24-code taxonomy.
+3. **No Stylistic False Positives**: Ensures no card flags valid German merely for stylistic preference, and accepts clean drafts (`cards: []`) immediately without error.
 
 ---
 

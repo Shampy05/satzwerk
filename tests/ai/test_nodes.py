@@ -13,7 +13,7 @@ def test_evaluator_passes_valid_card():
     )
     state: State = {
         "sentence": "Ich gehe zu den Bahnhof.",
-        "analysis": Analysis(cards=[card]),
+        "analysis": Analysis(cards=[card], confirmed_hypotheses=[]),
         "critique": "",
         "is_valid": False,
         "iterations": 0,
@@ -33,7 +33,7 @@ def test_evaluator_catches_non_verbatim_quote():
     )
     state: State = {
         "sentence": "Ich gehe zu den Bahnhof.",
-        "analysis": Analysis(cards=[card]),
+        "analysis": Analysis(cards=[card], confirmed_hypotheses=[]),
         "critique": "",
         "is_valid": False,
         "iterations": 0,
@@ -53,7 +53,7 @@ def test_evaluator_catches_leaked_correction():
     )
     state: State = {
         "sentence": "Ich gehe zu den Bahnhof.",
-        "analysis": Analysis(cards=[card]),
+        "analysis": Analysis(cards=[card], confirmed_hypotheses=[]),
         "critique": "",
         "is_valid": False,
         "iterations": 0,
@@ -73,7 +73,7 @@ def test_evaluator_catches_noop_correction():
     )
     state: State = {
         "sentence": "Ich gehe zu den Bahnhof.",
-        "analysis": Analysis(cards=[card]),
+        "analysis": Analysis(cards=[card], confirmed_hypotheses=[]),
         "critique": "",
         "is_valid": False,
         "iterations": 0,
@@ -99,7 +99,7 @@ def test_evaluator_accumulates_critiques_across_cards():
     )
     state: State = {
         "sentence": "Ich gehe zu den Bahnhof.",
-        "analysis": Analysis(cards=[card1, card2]),
+        "analysis": Analysis(cards=[card1, card2], confirmed_hypotheses=[]),
         "critique": "",
         "is_valid": False,
         "iterations": 0,

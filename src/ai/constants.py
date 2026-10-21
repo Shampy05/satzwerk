@@ -38,10 +38,18 @@ class PatternCode(StrEnum):
     SONST = "SONST"  # Other
 
 
+class CEFRLevel(StrEnum):
+    A1 = "A1"
+    A2 = "A2"
+    B1 = "B1"
+    B2 = "B2"
+
+
 class PatternMetadata(TypedDict):
     name: str
     group: str
     stage: int | None
+    cefr: CEFRLevel
     treatable: bool
     hint: str
 
@@ -51,6 +59,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Verb-second in main clauses",
         "group": "Word order",
         "stage": 4,
+        "cefr": CEFRLevel.A1,
         "treatable": True,
         "hint": 'finite verb must be second constituent ("Gestern habe ich…")',
     },
@@ -58,6 +67,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Separable-verb split",
         "group": "Word order",
         "stage": 3,
+        "cefr": CEFRLevel.A1,
         "treatable": True,
         "hint": 'separable prefix moves to clause end ("Ich rufe dich morgen an")',
     },
@@ -65,6 +75,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Verb-final in subordinate clauses",
         "group": "Word order",
         "stage": 5,
+        "cefr": CEFRLevel.A2,
         "treatable": True,
         "hint": "finite verb at end after weil/dass/wenn/ob/relative clauses",
     },
@@ -72,6 +83,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Verbal bracket (Satzklammer)",
         "group": "Word order",
         "stage": 3,
+        "cefr": CEFRLevel.A1,
         "treatable": True,
         "hint": "participle/infinitive at clause end with haben/sein/werden/modals",
     },
@@ -79,6 +91,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Time–manner–place ordering",
         "group": "Word order",
         "stage": None,
+        "cefr": CEFRLevel.B1,
         "treatable": True,
         "hint": "adverbial ordering: temporal before manner before place",
     },
@@ -86,6 +99,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Accusative for direct objects",
         "group": "Case",
         "stage": None,
+        "cefr": CEFRLevel.A1,
         "treatable": True,
         "hint": 'direct object takes accusative ("Ich sehe den Mann")',
     },
@@ -93,6 +107,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Dative objects & dative verbs",
         "group": "Case",
         "stage": None,
+        "cefr": CEFRLevel.A2,
         "treatable": True,
         "hint": "indirect objects and verbs like helfen/danken/gefallen take dative",
     },
@@ -100,6 +115,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Genitive",
         "group": "Case",
         "stage": None,
+        "cefr": CEFRLevel.B2,
         "treatable": True,
         "hint": "possession and genitive prepositions (wegen, trotz, während)",
     },
@@ -107,6 +123,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Case after fixed-case prepositions",
         "group": "Case",
         "stage": None,
+        "cefr": CEFRLevel.A2,
         "treatable": True,
         "hint": "mit/aus/bei/nach/von/zu → dative; für/ohne/gegen/durch/um → accusative",
     },
@@ -114,6 +131,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Two-way prepositions",
         "group": "Case",
         "stage": None,
+        "cefr": CEFRLevel.A2,
         "treatable": True,
         "hint": "an/auf/in/über/unter: accusative for motion, dative for location",
     },
@@ -121,6 +139,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Adjective endings",
         "group": "Agreement",
         "stage": None,
+        "cefr": CEFRLevel.B1,
         "treatable": True,
         "hint": "declension after der-words, ein-words, and bare nouns",
     },
@@ -128,6 +147,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Article–gender agreement",
         "group": "Agreement",
         "stage": None,
+        "cefr": CEFRLevel.A1,
         "treatable": True,
         "hint": "article/determiner must match noun's grammatical gender",
     },
@@ -135,6 +155,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Plural formation",
         "group": "Agreement",
         "stage": None,
+        "cefr": CEFRLevel.A1,
         "treatable": True,
         "hint": "wrong or missing plural form",
     },
@@ -142,6 +163,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Relative pronouns",
         "group": "Agreement",
         "stage": 5,
+        "cefr": CEFRLevel.B1,
         "treatable": True,
         "hint": "relative pronoun agrees in gender/number with antecedent, case from clause",
     },
@@ -149,6 +171,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Personal-pronoun case/reference",
         "group": "Agreement",
         "stage": None,
+        "cefr": CEFRLevel.A2,
         "treatable": True,
         "hint": "mir/mich, ihm/ihn confusion; unclear pronoun reference",
     },
@@ -156,6 +179,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Subject–verb agreement / conjugation",
         "group": "Verbs",
         "stage": None,
+        "cefr": CEFRLevel.A1,
         "treatable": True,
         "hint": "person/number endings, irregular present-tense stems (du fährst)",
     },
@@ -163,6 +187,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Tense choice & formation",
         "group": "Verbs",
         "stage": None,
+        "cefr": CEFRLevel.A2,
         "treatable": True,
         "hint": "Perfekt vs. Präteritum, haben vs. sein auxiliary, future with werden",
     },
@@ -170,6 +195,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Participle formation",
         "group": "Verbs",
         "stage": None,
+        "cefr": CEFRLevel.A2,
         "treatable": True,
         "hint": "ge- placement, strong vs. weak participles (gegangen, gearbeitet)",
     },
@@ -177,6 +203,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Konjunktiv II",
         "group": "Verbs",
         "stage": None,
+        "cefr": CEFRLevel.B1,
         "treatable": True,
         "hint": "hypotheticals and polite forms: würde + inf, hätte/wäre/könnte",
     },
@@ -184,6 +211,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Reflexive verbs",
         "group": "Verbs",
         "stage": None,
+        "cefr": CEFRLevel.A2,
         "treatable": True,
         "hint": "missing/wrong reflexive pronoun (sich freuen auf)",
     },
@@ -191,6 +219,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Preposition choice",
         "group": "Other",
         "stage": None,
+        "cefr": CEFRLevel.B1,
         "treatable": True,
         "hint": "wrong preposition for verb/noun (warten auf, Angst vor)",
     },
@@ -198,6 +227,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Spelling & capitalization",
         "group": "Other",
         "stage": None,
+        "cefr": CEFRLevel.A1,
         "treatable": True,
         "hint": "noun capitalization, umlauts, ß/ss",
     },
@@ -205,6 +235,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Word choice / idiomaticity",
         "group": "Other",
         "stage": None,
+        "cefr": CEFRLevel.B2,
         "treatable": False,
         "hint": "grammatical but unidiomatic German phrasing",
     },
@@ -212,6 +243,7 @@ TAXONOMY: dict[PatternCode, PatternMetadata] = {
         "name": "Other",
         "group": "Other",
         "stage": None,
+        "cefr": CEFRLevel.B2,
         "treatable": False,
         "hint": "anything not covered by another code",
     },

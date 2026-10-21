@@ -10,8 +10,12 @@ SYSTEM_PROMPT = (
     "3. explanation (L4): A concise grammatical rule hint that MUST NOT contain any words from the correction.\n"
     "4. correction (L5): The corrected words.\n\n"
     "Pedagogical Guidelines:\n"
-    "- Inline Hypothesis Markers: Learners mark uncertain words or structures with inline '?' "
-    "(e.g., '?zu den?' or 'zu den?'). You MUST inspect and address every marked hypothesis.\n"
+    "- Clean Drafts: If the learner's draft is already 100% grammatically correct, return an empty cards list (`cards: []`). Do NOT invent errors where none exist.\n"
+    "- Comprehensive Analysis: You must identify and generate a separate card for EVERY error present in the entire draft (e.g. check word order, case, prepositions, endings). Do not stop after finding just one error!\n"
+    "- Inline Hypothesis Markers (?):\n"
+    "  Learners mark uncertain words with inline '?' (e.g. '?zu den?' or '?dem Mann?').\n"
+    "  * If an inline hypothesis contains a real error (e.g. '?zu den?'), create an error card for it.\n"
+    "  * If an inline hypothesis is ALREADY CORRECT (e.g. '?dem Mann?' in 'Ich helfe ?dem Mann?.'), do NOT create an error card! Never create cards where the correction is identical to the quote. Instead, add the correct phrase to `confirmed_hypotheses`.\n"
     "- No Stylistic Overcorrection: Only flag genuine grammatical, morphosyntactic, or orthographic "
     "errors. Never correct grammatically valid phrasing purely for stylistic preference.\n\n"
     "Allowed Pattern Taxonomy (L3):\n"
@@ -26,18 +30,21 @@ CRITIC_SYSTEM_PROMPT = (
     "- Most drafts will NOT contain any '?' markers. Error cards are expected whenever the learner makes an error!\n\n"
     "You must evaluate three strict criteria:\n\n"
     "1. Hypothesis Marker Coverage (?):\n"
-    "   Learners may optionally mark words they felt uncertain about using inline '?' (e.g. '?zu den?' or 'zu den?').\n"
-    "   - If the draft contains inline '?' markers, verify that each marked hypothesis was addressed by a card.\n"
-    "   - If the draft contains NO '?' markers, this check PASSES completely. Do NOT penalize cards or claim cards shouldn't exist just because there are no '?' markers.\n\n"
+    "   Learners mark uncertain words with inline '?' (e.g. '?zu den?' or '?dem Mann?').\n"
+    "   - INCORRECT Hypothesis (e.g. '?den Mann?' in 'Ich helfe ?den Mann?.'): A card diagnosing the error is REQUIRED. It must NOT appear in confirmed_hypotheses.\n"
+    "   - CORRECT Hypothesis (e.g. '?dem Mann?' in 'Ich helfe ?dem Mann?.'): Must be listed in confirmed_hypotheses, and must NOT have an error card.\n"
+    "   - Draft with NO '?' markers: This check automatically PASSES completely.\n\n"
     "2. Taxonomy Code Accuracy (L3):\n"
     "   Verify that each card's pattern_code accurately matches the error transition using ONLY the 24 allowed codes.\n"
     "   - KAS-PREP is the correct code for prepositional case errors (e.g. 'zu' + dative).\n"
+    "   - KAS-DAT is the correct code for dative verb object errors (e.g. 'helfen' + dative).\n"
     "   - WO-VF is the correct code for verb-final position in subordinate clauses (e.g. 'weil ...').\n"
     "   Do NOT reject standard, valid taxonomy codes.\n\n"
     "3. No Stylistic False Positives:\n"
-    "   Ensure no cards flag grammatically valid German just for stylistic preference.\n\n"
+    "   Ensure no cards flag grammatically valid German just for stylistic preference.\n"
+    "   - Clean Drafts: If the learner's draft has NO errors and 0 cards were generated, this is 100% CORRECT. Return is_valid=True with an empty critiques list!\n\n"
     "If any check fails, return is_valid=False and provide targeted, actionable critiques for the generator. "
-    "If all checks pass, return is_valid=True with an empty critiques list."
+    "If all checks pass (or if the draft is clean and 0 cards were generated), return is_valid=True with an empty critiques list."
 )
 
 
@@ -66,9 +73,15 @@ def build_critic_messages(sentence: str, analysis: Analysis) -> list[BaseMessage
         )
     ) or "(No error cards generated)"
 
+    confirmed_summary = (
+        ", ".join(f"'{h}'" for h in analysis.confirmed_hypotheses)
+        or "(None)"
+    )
+
     user_content = (
         f"Learner Draft: {sentence}\n\n"
-        f"Generated Cards:\n{cards_summary}\n\n"
+        f"Generated Error Cards:\n{cards_summary}\n\n"
+        f"Confirmed Correct Hypotheses: {confirmed_summary}\n\n"
         "Evaluate the cards against the 3 criteria (Hypothesis Markers, Taxonomy Accuracy, No Stylistic False Positives)."
     )
 

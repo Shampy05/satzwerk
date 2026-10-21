@@ -28,8 +28,9 @@ class AIService:
             )
 
         if not analysis.cards:
-            raise CardGenerationFailedException(
-                message="No errors found in the sentence."
+            return EnrichedAnalysis(
+                cards=[],
+                confirmed_hypotheses=analysis.confirmed_hypotheses,
             )
 
         enriched_cards = [
@@ -39,4 +40,7 @@ class AIService:
             for card in analysis.cards
         ]
 
-        return EnrichedAnalysis(cards=enriched_cards)
+        return EnrichedAnalysis(
+            cards=enriched_cards,
+            confirmed_hypotheses=analysis.confirmed_hypotheses,
+        )

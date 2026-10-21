@@ -7,7 +7,7 @@ from src.ai.state import State
 from src.config import settings
 
 
-def generator(state: State):
+async def generator(state: State):
     print("---Node Generator---")
     messages = build_generator_messages(
         sentence=state["sentence"],
@@ -15,7 +15,7 @@ def generator(state: State):
         previous_analysis=state["analysis"],
     )
 
-    result: Analysis = cast(Analysis, structured_generator_llm.invoke(messages))
+    result: Analysis = cast(Analysis, await structured_generator_llm.ainvoke(messages))
     return {"analysis": result, "iterations": state["iterations"] + 1}
 
 
@@ -58,7 +58,7 @@ def deterministic_evaluator(state: State):
     return {"is_valid": True, "critique": ""}
 
 
-def semantic_evaluator(state: State):
+async def semantic_evaluator(state: State):
     print("---Node Semantic Evaluator---")
     analysis = state["analysis"]
     if analysis is None:
@@ -70,7 +70,7 @@ def semantic_evaluator(state: State):
     )
 
     evaluation: SemanticEvaluation = cast(
-        SemanticEvaluation, structured_critic_llm.invoke(messages)
+        SemanticEvaluation, await structured_critic_llm.ainvoke(messages)
     )
 
     if not evaluation.is_valid and evaluation.critiques:

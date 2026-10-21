@@ -94,17 +94,55 @@ Satzwerk uses a cyclic LangGraph architecture with a **two-stage verification ga
 
 ---
 
-## 24-Pattern Error Taxonomy
+## 24-Pattern Error Taxonomy & SLA Grounding
 
-Satzwerk standardizes grammatical errors into a 24-code enum (`PatternCode`) rooted in Pienemann's Processability Theory and Ferris's treatable error categories:
+Satzwerk standardizes German grammatical errors into a 24-code enum (`PatternCode`) rooted in Manfred Pienemann's **Processability Theory (1998)**, Dana Ferris's **treatable vs. untreatable error taxonomy (2002)**, and the **Profile deutsch / CEFR** curricular framework (Glaboniat et al., Goethe-Institut / Council of Europe).
 
-| Group | Codes | Description |
+### Processability Theory (Pienemann Stages) vs. CEFR Levels
+- **Pienemann Processability Theory (`stage: 3..5`)**: Strictly models developmental constraints on syntactic constituent movement and exchange across grammatical structures (originally derived from the ZISA German L2 longitudinal study). Exactly **5 codes** in our taxonomy represent syntactic word order movement:
+  - `WO-SEP` (Stage 3: Separable prefix split)
+  - `WO-KLAM` (Stage 3: Verbal bracket / *Satzklammer*)
+  - `WO-V2` (Stage 4: Subject-verb inversion / Verb-second)
+  - `WO-VF` (Stage 5: Subordinate clause verb-final)
+  - `PRO-REL` (Stage 5: Relative pronoun subordinate clause syntax)
+  The remaining 19 codes represent morpholexical features, prepositions, or inflectional paradigms where syntactic movement stages do not apply (`stage: None`).
+- **CEFR Proficiency Alignment (`cefr: A1..B2`)**: To ensure comprehensive pedagogical coverage across levels A1 through B2, all 24 error codes are mapped to CEFR tiers using *Profile deutsch* benchmarks and empirical learner corpus frequencies (MERLIN, Falko):
+
+| CEFR Level | Target Grammar Categories (`PatternCode`) | Focus & SLA Pedagogical Milestones |
 | :--- | :--- | :--- |
-| **Word Order** | `WO-V2`, `WO-SEP`, `WO-VF`, `WO-KLAM`, `WO-TMP` | Verb-second, separable prefixes, subordinate verb-final, Satzklammer, TeKaMoLo |
-| **Case** | `KAS-AKK`, `KAS-DAT`, `KAS-GEN`, `KAS-PREP`, `KAS-2WEG` | Direct/indirect objects, genitive, fixed-case prepositions, two-way prepositions |
-| **Agreement** | `ADJ-END`, `ART-GEN`, `N-PL`, `PRO-REL`, `PRO-KAS` | Adjective declension, gender agreement, plurals, relative/personal pronouns |
-| **Verbs** | `V-KONJ`, `V-TEMP`, `V-PART`, `V-K2`, `V-REFL` | Conjugation, tense choice, participle formation, Konjunktiv II, reflexives |
-| **Other** | `PREP-W`, `ORTH`, `WORTW`, `SONST` | Preposition choice, orthography/capitalization, word choice, other |
+| **A1 (Foundation)** | `WO-V2`, `WO-SEP`, `WO-KLAM`, `KAS-AKK`, `ART-GEN`, `N-PL`, `V-KONJ`, `ORTH` | Canonical V2 order, separable verbs, verbal brackets, accusative objects, grammatical gender, basic verb conjugation, and capitalization. |
+| **A2 (Core Expansion)** | `WO-VF`, `KAS-DAT`, `KAS-PREP`, `KAS-2WEG`, `PRO-KAS`, `V-TEMP`, `V-PART`, `V-REFL` | Subordinate clauses (*weil*, *dass*), dative objects and fixed prepositions, two-way prepositions (*Wechselpräpositionen*), Perfekt auxiliary and participle formation, reflexive pronouns. |
+| **B1 (Intermediate)** | `WO-TMP`, `ADJ-END`, `PRO-REL`, `V-K2`, `PREP-W` | Adverbial ordering (TeKaMoLo), adjective declension paradigms, relative clauses, Konjunktiv II (hypotheticals/politeness), verb/noun prepositional idioms. |
+| **B2 (Advanced)** | `KAS-GEN`, `WORTW`, `SONST` | Genitive case and prepositions (*trotz*, *während*, *wegen*), subtle register and lexical nuance (*Wortwahl*), complex stylistic/discourse structures. |
+
+### Complete Taxonomy Overview
+
+| Group | Code | CEFR | PT Stage | Treatable? | Description |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **Word Order** | `WO-V2` | A1 | 4 | Yes | Verb-second in main clauses (*Gestern habe ich…*) |
+| | `WO-SEP` | A1 | 3 | Yes | Separable-verb split (*Ich rufe dich morgen an*) |
+| | `WO-VF` | A2 | 5 | Yes | Verb-final in subordinate clauses (*weil/dass/wenn/ob*) |
+| | `WO-KLAM` | A1 | 3 | Yes | Verbal bracket (*Satzklammer*) with auxiliaries/modals |
+| | `WO-TMP` | B1 | — | Yes | TeKaMoLo adverbial sequence (Temporal before Manner before Place) |
+| **Case** | `KAS-AKK` | A1 | — | Yes | Direct object accusative (*Ich sehe den Mann*) |
+| | `KAS-DAT` | A2 | — | Yes | Indirect objects and dative verbs (*helfen*, *danken*, *gefallen*) |
+| | `KAS-GEN` | B2 | — | Yes | Genitive possession and prepositions (*wegen*, *trotz*, *während*) |
+| | `KAS-PREP` | A2 | — | Yes | Fixed-case prepositions (*mit/zu* &rarr; Dat; *für/ohne* &rarr; Akk) |
+| | `KAS-2WEG` | A2 | — | Yes | Two-way prepositions (motion &rarr; Akk, location &rarr; Dat) |
+| **Agreement** | `ADJ-END` | B1 | — | Yes | Adjective declension after *der*-words, *ein*-words, and bare nouns |
+| | `ART-GEN` | A1 | — | Yes | Article & determiner gender agreement (*der/die/das*) |
+| | `N-PL` | A1 | — | Yes | Plural formation and umlaut/ending selection |
+| | `PRO-REL` | B1 | 5 | Yes | Relative pronoun agreement and case |
+| | `PRO-KAS` | A2 | — | Yes | Personal pronoun case reference (*mir/mich*, *ihm/ihn*) |
+| **Verbs** | `V-KONJ` | A1 | — | Yes | Subject-verb agreement and present-tense vowel changes |
+| | `V-TEMP` | A2 | — | Yes | Tense choice & Perfekt auxiliary (*haben* vs. *sein*) |
+| | `V-PART` | A2 | — | Yes | Participle formation (*ge-* prefix, *-t* vs. *-en*) |
+| | `V-K2` | B1 | — | Yes | Konjunktiv II (*würde* + inf, *hätte*, *wäre*, *könnte*) |
+| | `V-REFL` | A2 | — | Yes | Reflexive verbs and pronoun selection (*sich freuen auf*) |
+| **Other** | `PREP-W` | B1 | — | Yes | Preposition choice for verb/noun collocations (*warten auf*) |
+| | `ORTH` | A1 | — | Yes | Orthography, noun capitalization, umlauts, *ß/ss* |
+| | `WORTW` | B2 | — | No | Word choice and unidiomatic phrasing |
+| | `SONST` | B2 | — | No | General syntax or other non-categorized issues |
 
 ---
 
