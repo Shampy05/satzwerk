@@ -1,47 +1,86 @@
+import hashlib
 from collections import Counter
 from typing import cast
 
-from sqlalchemy import func
+from pydantic import ValidationError
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from valkey.exceptions import ValkeyError
 
+from src.ai.constants import CEFR_RANK, TAXONOMY, CEFRLevel, PatternCode
 from src.ai.exceptions import CardGenerationFailedException
 from src.ai.graph import graph
+from src.ai.llm import structured_prompt_llm
+from src.ai.prompts import build_writing_prompt_messages
 from src.ai.schema import (
+    Analysis,
     EnrichedAnalysis,
     EnrichedGermanCard,
     GermanCard,
     LearnerProfile,
+    WritingPromptResponse,
 )
 from src.ai.state import State
 from src.ai.utils import locate_sentence
 from src.auth.models import UserErrorLedger
+from src.cache import valkey_client
+
+DRAFT_CACHE_TTL_SECONDS = 86400
 
 
 class AIService:
     @staticmethod
+    def _draft_cache_key(sentence: str, cefr_level: CEFRLevel) -> str:
+        digest = hashlib.sha256(sentence.strip().encode("utf-8")).hexdigest()
+        return f"ai:draft:{cefr_level}:{digest}"
+
+    @staticmethod
     async def analyze_draft(
         sentence: str,
-        learner: LearnerProfile = LearnerProfile(),
+        learner: LearnerProfile | None = None,
         db: AsyncSession | None = None,
+        is_revision: bool = False,
     ) -> EnrichedAnalysis:
-        initial_state: State = {
-            "sentence": sentence,
-            "analysis": None,
-            "is_valid": False,
-            "critique": "",
-            "iterations": 0,
-            "cefr_level": learner.cefr_level,
-        }
+        if learner is None:
+            learner = LearnerProfile()
 
-        final_state: State = cast(State, await graph.ainvoke(initial_state))
+        cache_key = AIService._draft_cache_key(sentence, learner.cefr_level)
+        analysis: Analysis | None = None
 
-        analysis = final_state.get("analysis")
+        try:
+            cached_payload = await valkey_client.get(cache_key)
+            if cached_payload:
+                analysis = Analysis.model_validate_json(cached_payload)
+        except (ValkeyError, ValidationError):
+            analysis = None
 
-        if not analysis or not final_state.get("is_valid"):
-            raise CardGenerationFailedException(
-                message=f"Failed to generate a valid card after {final_state['iterations']} attempts."
-            )
+        if analysis is None:
+            initial_state: State = {
+                "sentence": sentence,
+                "analysis": None,
+                "is_valid": False,
+                "critique": "",
+                "iterations": 0,
+                "cefr_level": learner.cefr_level,
+            }
+
+            final_state: State = cast(State, await graph.ainvoke(initial_state))
+            analysis = final_state.get("analysis")
+
+            if not analysis or not final_state.get("is_valid"):
+                raise CardGenerationFailedException(
+                    message=f"Failed to generate a valid card after {final_state['iterations']} attempts."
+                )
+
+            try:
+                await valkey_client.set(
+                    cache_key,
+                    analysis.model_dump_json(),
+                    ex=DRAFT_CACHE_TTL_SECONDS,
+                )
+            except ValkeyError:
+                pass
 
         if not analysis.cards:
             return EnrichedAnalysis(
@@ -49,7 +88,7 @@ class AIService:
                 confirmed_hypotheses=analysis.confirmed_hypotheses,
             )
 
-        if learner.user_id is not None and db is not None:
+        if learner.user_id is not None and db is not None and not is_revision:
             await AIService.record_user_error(
                 db=db, user_id=learner.user_id, cards=analysis.cards
             )
@@ -97,3 +136,46 @@ class AIService:
 
         await db.execute(stmt)
         await db.commit()
+
+    @staticmethod
+    async def get_top_weaknesses(
+        db: AsyncSession, user_id: int, user_cefr: CEFRLevel
+    ) -> list[PatternCode]:
+        stmt = select(UserErrorLedger).where(UserErrorLedger.user_id == user_id)
+        result = await db.execute(stmt)
+
+        rows = result.scalars().all()
+        scores: dict[PatternCode, int] = {}
+        user_rank = CEFR_RANK[user_cefr]
+
+        for row in rows:
+            code = PatternCode(row.pattern_code)
+            meta = TAXONOMY[code]
+            if not meta["treatable"]:
+                continue
+
+            pattern_rank = CEFR_RANK[meta["cefr"]]
+            if pattern_rank <= user_rank:
+                scores[code] = row.error_count * 2
+            else:
+                scores[code] = row.error_count
+
+        return sorted(scores, key=lambda code: scores[code], reverse=True)[:3]
+
+    @staticmethod
+    async def generate_writing_prompt(
+        db: AsyncSession, user_id: int | None, user_cefr: CEFRLevel
+    ) -> WritingPromptResponse:
+        weaknesses = (
+            await AIService.get_top_weaknesses(
+                db=db, user_id=user_id, user_cefr=user_cefr
+            )
+            if user_id is not None
+            else []
+        )
+        messages = build_writing_prompt_messages(
+            cefr_level=user_cefr, target_patterns=weaknesses
+        )
+        return cast(
+            WritingPromptResponse, await structured_prompt_llm.ainvoke(messages)
+        )

@@ -63,19 +63,19 @@ satzwerk/
 │   │   ├── edges.py                # decide() conditional routing
 │   │   ├── graph.py                # Compiled StateGraph workflow
 │   │   ├── utils.py                # Deterministic sentence splitter & locator
-│   │   ├── service.py              # AIService graph execution bridge
-│   │   ├── router.py               # FastAPI endpoints (/ai/analyze-draft, /ai/demo)
-│   │   ├── demo_html.py            # Standalone 5-rung HTML/Tailwind interactive test UI
+│   │   ├── service.py              # AIService graph execution bridge, Valkey cache & Error Ledger
+│   │   ├── router.py               # FastAPI endpoints (/ai/analyze-draft, /ai/weaknesses, /ai/writing_prompt, /ai/demo)
+│   │   ├── demo_html.py            # Standalone 5-rung HTML/Tailwind interactive studio UI
 │   │   └── exceptions.py           # CardGenerationFailedException
 │   ├── auth/                       # Authentication, JWT, Valkey OTP, Users, Error Ledger, Dependencies
 │   ├── config.py                   # Central Pydantic BaseSettings (.env loading)
 │   ├── database.py                 # Async SQLAlchemy engine & session factory
-│   ├── cache.py                    # Valkey / Redis client
+│   ├── cache.py                    # Valkey / Redis client (OTP & AI draft diagnosis cache)
 │   ├── exceptions.py               # AppException & global exception handler
 │   └── main.py                     # FastAPI entrypoint and lifespan
 ├── tests/
-│   ├── ai/                         # AI graph and deterministic node tests
-│   └── conftest.py                 # Async test database & cache fixtures
+│   ├── ai/                         # AI graph, deterministic node, Valkey cache, Error Ledger & router tests
+│   └── conftest.py                 # Async test database & cache fixtures (skipped for pure unit tests)
 ```
 
 ---
@@ -134,6 +134,19 @@ If any check fails, it collects targeted feedback in `critiques` and loops strai
 2. **Taxonomy Code Accuracy (L3)**: Confirms `pattern_code` accurately matches the grammatical error between `quote` and `correction` using the 24-code taxonomy.
 3. **No Stylistic False Positives**: Ensures no card flags valid German merely for stylistic preference, and accepts clean drafts (`cards: []`) immediately without error.
 
+### Stage 3: The Closed-Loop Error Ledger, Valkey Caching, Playful Elicitation & Self-Repair Cycle
+1. **Valkey Draft Diagnosis Cache (`ai:draft:{cefr_level}:{sha256}`)**:
+   - Before invoking the LangGraph pipeline, `AIService.analyze_draft` checks Valkey (`DRAFT_CACHE_TTL_SECONDS = 86400`). On a cache hit, the validated `Analysis` is restored in `~1ms` (0 LLM calls), while still executing downstream Error Ledger recording when `is_revision=False`.
+2. **Atomic Error Ledger (`UserErrorLedger`)**:
+   - On initial draft submission (`is_revision=False`), `AIService.record_user_error` atomically upserts (`INSERT ... ON CONFLICT DO UPDATE`) the learner's diagnosed `PatternCode` counts into PostgreSQL (`user_error_ledger`).
+3. **CEFR Level-Gap Weighting (`get_top_weaknesses` / `GET /ai/weaknesses`)**:
+   - Filters out untreatable categories (`WORTW`, `SONST` where `treatable == False`).
+   - Compares the pattern's CEFR level (`TAXONOMY[code]["cefr"]`) against the learner's `cefr_level` using `CEFR_RANK`: foundational regressions (`pattern_rank <= user_rank`) receive a `2x` priority multiplier so lower-level gaps surface immediately.
+4. **Playful Elicitation Prompt Generator (`generate_writing_prompt` / `GET /ai/writing_prompt`)**:
+   - Combines the learner's `cefr_level` and top 3 weak `PatternCode`s from the Error Ledger to generate a witty, non-textbook 1–2 sentence writing scenario with explicit syntactic constraints (while keeping vocabulary accessible to their CEFR level).
+5. **Multi-Attempt Self-Repair Loop (`is_revision=True`)**:
+   - When errors are detected on Attempt #1, the learner uses the graduated 5-rung hints (L1 $\rightarrow$ L4) to revise and resubmit their draft (`is_revision=True`) until zero errors remain (`cards: []`). Revision attempts validate self-correction without double-penalizing the learner's `UserErrorLedger`.
+
 ---
 
 ## 5. Development Conventions
@@ -146,10 +159,12 @@ If any check fails, it collects targeted feedback in `critiques` and loops strai
    Code must pass with **0 errors, 0 warnings**.
 3. **Pydantic & OpenAI Structured Outputs**:
    - Always avoid optional default factories on container models used for structured output (e.g., use `cards: list[GermanCard] = Field(...)` instead of `default_factory=list`). OpenAI Structured Outputs rejects schemas where properties are missing from the `required` list.
+   - Place evidence/reasoning list fields (such as `critiques: list[str]` in `SemanticEvaluation`) **before** summary boolean flags (`is_valid: bool`) so autoregressive models evaluate violations before committing to the boolean token.
 4. **Environment Variables**:
    - Secrets belong in `.env`.
    - Never commit `.env` or API keys.
    - Application configuration flows strictly through `Settings` in [`src/config.py`](file:///Users/macbook/Desktop/satzwerk/src/config.py).
 5. **Testing**:
    - Run tests using `.venv/bin/pytest`.
-   - Unit tests for deterministic nodes live in [`tests/ai/test_nodes.py`](file:///Users/macbook/Desktop/satzwerk/tests/ai/test_nodes.py).
+   - Pure unit tests for deterministic nodes and sentence utilities live in [`tests/ai/test_nodes.py`](file:///Users/macbook/Desktop/satzwerk/tests/ai/test_nodes.py) (and bypass DB/Valkey setup automatically).
+   - Router, Error Ledger, Valkey caching, and prompt generation integration tests live in [`tests/ai/test_router.py`](file:///Users/macbook/Desktop/satzwerk/tests/ai/test_router.py).

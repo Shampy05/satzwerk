@@ -20,8 +20,15 @@ TestingSessionLocal = async_sessionmaker(
 )
 
 
+_DB_FIXTURES = {"db_session", "client", "verified_user", "unverified_user"}
+
+
 @pytest.fixture(autouse=True)
-async def setup_database():
+async def setup_database(request: pytest.FixtureRequest):
+    if not (_DB_FIXTURES & set(request.fixturenames)):
+        yield
+        return
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -32,7 +39,11 @@ async def setup_database():
 
 
 @pytest.fixture(autouse=True)
-async def setup_cache():
+async def setup_cache(request: pytest.FixtureRequest):
+    if not (_DB_FIXTURES & set(request.fixturenames)):
+        yield ()
+        return
+
     await valkey_client.flushdb()
     yield ()
     await valkey_client.flushdb()

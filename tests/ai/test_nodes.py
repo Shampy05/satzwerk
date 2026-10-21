@@ -2,6 +2,7 @@ from src.ai.constants import PatternCode
 from src.ai.nodes import deterministic_evaluator
 from src.ai.schema import Analysis, GermanCard
 from src.ai.state import State
+from src.ai.utils import locate_sentence, split_sentences
 
 
 def test_evaluator_passes_valid_card():
@@ -109,3 +110,19 @@ def test_evaluator_accumulates_critiques_across_cards():
     assert result["is_valid"] is False
     assert "Card 1" in result["critique"]
     assert "Card 2" in result["critique"]
+
+
+def test_split_sentences_ignores_inline_hypothesis_markers():
+    draft = "Ich gehe ?zu den? Bahnhof, weil ich habe keine Zeit. Morgen bleibe ich zu Hause!"
+    sentences = split_sentences(draft)
+    assert len(sentences) == 2
+    assert sentences[0] == "Ich gehe ?zu den? Bahnhof, weil ich habe keine Zeit."
+    assert sentences[1] == "Morgen bleibe ich zu Hause!"
+
+
+def test_locate_sentence_with_inline_markers_and_multiple_sentences():
+    draft = "Ich gehe ?zu den? Bahnhof, weil ich habe keine Zeit. Gestern ich habe gearbeitet."
+    assert locate_sentence(draft, "?zu den? Bahnhof") == 0
+    assert locate_sentence(draft, "weil ich habe keine Zeit") == 0
+    assert locate_sentence(draft, "Gestern ich habe") == 1
+

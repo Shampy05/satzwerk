@@ -1,7 +1,7 @@
 from langchain_litellm import ChatLiteLLMRouter
 from litellm.router import Router
 
-from src.ai.schema import Analysis, SemanticEvaluation
+from src.ai.schema import Analysis, SemanticEvaluation, WritingPromptResponse
 from src.config import settings
 
 llm_router = Router(
@@ -11,6 +11,7 @@ llm_router = Router(
             "litellm_params": {
                 "model": settings.OPENAI_LLM_MODEL,
                 "temperature": settings.LLM_TEMPERATURE,
+                "reasoning_effort": "minimal",
             },
         },
         {
@@ -23,8 +24,13 @@ llm_router = Router(
     ]
 )
 
-generator_llm = ChatLiteLLMRouter(router=llm_router, model="generator")
+generator_llm = ChatLiteLLMRouter(
+    router=llm_router,
+    model="generator",
+    model_kwargs={"reasoning_effort": "minimal"},
+)
 critic_llm = ChatLiteLLMRouter(router=llm_router, model="critic")
 
 structured_generator_llm = generator_llm.with_structured_output(Analysis)
 structured_critic_llm = critic_llm.with_structured_output(SemanticEvaluation)
+structured_prompt_llm = generator_llm.with_structured_output(WritingPromptResponse)

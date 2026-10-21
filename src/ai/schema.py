@@ -27,6 +27,7 @@ class EnrichedGermanCard(GermanCard):
 class GenerateCardRequest(BaseModel):
     sentence: str
     target_level: CEFRLevel | None = None
+    is_revision: bool = False
 
 
 class Analysis(BaseModel):
@@ -48,14 +49,23 @@ class EnrichedAnalysis(BaseModel):
 
 
 class SemanticEvaluation(BaseModel):
-    is_valid: bool = Field(
-        description="True only if all semantic checks pass with zero issues"
-    )
     critiques: list[str] = Field(
-        description="List of specific critiques if is_valid is False; empty list is is_valid is True"
+        description="List of specific rule violations found; MUST be an empty list [] if all 3 rules pass"
+    )
+    is_valid: bool = Field(
+        description="True if critiques is empty []; False only if critiques is non-empty"
     )
 
 
 class LearnerProfile(BaseModel):
     user_id: int | None = None
     cefr_level: CEFRLevel = CEFRLevel.A1
+
+
+class WritingPromptResponse(BaseModel):
+    prompt: str = Field(
+        description="A short writing task in English with specific German grammar constraints for the learner"
+    )
+    target_patterns: list[PatternCode] = Field(
+        description="The grammar pattern codes targetted by this writing prompt"
+    )

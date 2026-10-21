@@ -1,10 +1,9 @@
-from typing import Literal, cast
+from typing import cast
 
 from src.ai.llm import structured_critic_llm, structured_generator_llm
 from src.ai.prompts import build_critic_messages, build_generator_messages
 from src.ai.schema import Analysis, SemanticEvaluation
 from src.ai.state import State
-from src.config import settings
 
 
 async def generator(state: State):

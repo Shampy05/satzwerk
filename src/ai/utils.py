@@ -2,8 +2,15 @@ import re
 
 
 def split_sentences(text: str) -> list[str]:
-    """Splits German text on sentence boundaries (. ! ?)."""
-    return [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+    """Splits German text on sentence boundaries (. ! ?), ignoring inline ?...? hypothesis markers."""
+    masked = re.sub(r"(?<!\S)\?([^.!?\n]+?)\?", lambda m: "_" * len(m.group(0)), text)
+    spans = [m.end() for m in re.finditer(r"(?<=[.!?])\s+", masked)]
+    bounds = [0, *spans, len(text)]
+    return [
+        text[bounds[i] : bounds[i + 1]].strip()
+        for i in range(len(bounds) - 1)
+        if text[bounds[i] : bounds[i + 1]].strip()
+    ]
 
 
 def locate_sentence(text: str, quote: str) -> int:
