@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from src.ai.constants import PatternCode
+from src.ai.constants import CEFRLevel, PatternCode
 
 
 class GermanCard(BaseModel):
@@ -26,6 +26,7 @@ class EnrichedGermanCard(GermanCard):
 
 class GenerateCardRequest(BaseModel):
     sentence: str
+    target_level: CEFRLevel | None = None
 
 
 class Analysis(BaseModel):
@@ -53,3 +54,8 @@ class SemanticEvaluation(BaseModel):
     critiques: list[str] = Field(
         description="List of specific critiques if is_valid is False; empty list is is_valid is True"
     )
+
+
+class LearnerProfile(BaseModel):
+    user_id: int | None = None
+    cefr_level: CEFRLevel = CEFRLevel.A1

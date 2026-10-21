@@ -1,6 +1,6 @@
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 
-from src.ai.constants import taxonomy_prompt_block
+from src.ai.constants import CEFRLevel, taxonomy_prompt_block
 from src.ai.schema import Analysis
 
 SYSTEM_PROMPT = (
@@ -12,6 +12,7 @@ SYSTEM_PROMPT = (
     "Pedagogical Guidelines:\n"
     "- Clean Drafts: If the learner's draft is already 100% grammatically correct, return an empty cards list (`cards: []`). Do NOT invent errors where none exist.\n"
     "- Comprehensive Analysis: You must identify and generate a separate card for EVERY error present in the entire draft (e.g. check word order, case, prepositions, endings). Do not stop after finding just one error!\n"
+    "- CEFR Scaffolding: If a Learner Target CEFR Level is specified, calibrate explanation (L4) wording to be clear and accessible to a learner at that level without using overly complex grammatical jargon.\n"
     "- Inline Hypothesis Markers (?):\n"
     "  Learners mark uncertain words with inline '?' (e.g. '?zu den?' or '?dem Mann?').\n"
     "  * If an inline hypothesis contains a real error (e.g. '?zu den?'), create an error card for it.\n"
@@ -49,9 +50,14 @@ CRITIC_SYSTEM_PROMPT = (
 
 
 def build_generator_messages(
-    sentence: str, critique: str | None, previous_analysis: Analysis | None = None
+    sentence: str,
+    critique: str | None = None,
+    previous_analysis: Analysis | None = None,
+    cefr_level: CEFRLevel | None = None,
 ) -> list[BaseMessage]:
     user_content = f"Sentence: {sentence}"
+    if cefr_level:
+        user_content += f"\nLearner Target CEFR Level: {cefr_level.value}"
 
     if previous_analysis and previous_analysis.cards and critique:
         attempt_summary = "\n".join(

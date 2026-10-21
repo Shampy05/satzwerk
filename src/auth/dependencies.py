@@ -17,7 +17,7 @@ async def get_current_user(
 ) -> User:
     try:
         payload = jwt.decode(
-            token.credentials, settings.SECRET_KEY, algorithms=settings.ALGORITHM
+            token.credentials, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
 
         user_id = payload.get("sub")
@@ -30,7 +30,7 @@ async def get_current_user(
             "Token has expired. Please log in again.",
             status_code=status.HTTP_401_UNAUTHORIZED,
         )
-    except jwt.InvalidSignatureError:
+    except jwt.InvalidTokenError:
         raise AppException(
             "Invalid authentication token.", status_code=status.HTTP_401_UNAUTHORIZED
         )
@@ -40,3 +40,31 @@ async def get_current_user(
         raise AppException("User not found", status_code=status.HTTP_401_UNAUTHORIZED)
 
     return user
+
+
+CurrentUser = Annotated[User, Depends(get_current_user)]
+
+optional_security = HTTPBearer(auto_error=False)
+
+
+async def get_optional_current_user(
+    token: Annotated[HTTPAuthorizationCredentials | None, Depends(optional_security)],
+    db: DbDep,
+) -> User | None:
+    if token is None:
+        return None
+
+    try:
+        payload = jwt.decode(
+            token.credentials, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+    except (jwt.PyJWTError, ValueError):
+        return None
+
+    return await db.get(User, int(user_id))
+
+
+OptionalCurrentUser = Annotated[User | None, Depends(get_optional_current_user)]

@@ -13,6 +13,7 @@ async def generator(state: State):
         sentence=state["sentence"],
         critique=state["critique"],
         previous_analysis=state["analysis"],
+        cefr_level=state.get("cefr_level"),
     )
 
     result: Analysis = cast(Analysis, await structured_generator_llm.ainvoke(messages))

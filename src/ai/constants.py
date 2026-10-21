@@ -45,6 +45,14 @@ class CEFRLevel(StrEnum):
     B2 = "B2"
 
 
+CEFR_RANK: dict[CEFRLevel, int] = {
+    CEFRLevel.A1: 1,
+    CEFRLevel.A2: 2,
+    CEFRLevel.B1: 3,
+    CEFRLevel.B2: 4,
+}
+
+
 class PatternMetadata(TypedDict):
     name: str
     group: str

@@ -55,7 +55,7 @@ satzwerk/
 ├── src/
 │   ├── ai/                         # LangGraph Evaluator-Optimizer & AI Services
 │   │   ├── constants.py            # 24-code PatternCode StrEnum and taxonomy metadata
-│   │   ├── schema.py               # Pydantic v2 schemas: GermanCard, EnrichedGermanCard, Analysis
+│   │   ├── schema.py               # Pydantic v2 schemas: GermanCard, EnrichedGermanCard, Analysis, LearnerProfile
 │   │   ├── state.py                # TypedDict LangGraph state
 │   │   ├── prompts.py              # System & Human message builders
 │   │   ├── llm.py                  # LiteLLM client with structured output bindings
@@ -67,7 +67,7 @@ satzwerk/
 │   │   ├── router.py               # FastAPI endpoints (/ai/analyze-draft, /ai/demo)
 │   │   ├── demo_html.py            # Standalone 5-rung HTML/Tailwind interactive test UI
 │   │   └── exceptions.py           # CardGenerationFailedException
-│   ├── auth/                       # Authentication, JWT, Valkey OTP, Users
+│   ├── auth/                       # Authentication, JWT, Valkey OTP, Users, Error Ledger, Dependencies
 │   ├── config.py                   # Central Pydantic BaseSettings (.env loading)
 │   ├── database.py                 # Async SQLAlchemy engine & session factory
 │   ├── cache.py                    # Valkey / Redis client
