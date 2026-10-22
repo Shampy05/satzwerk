@@ -3,12 +3,12 @@ from collections import Counter
 from typing import cast
 
 from pydantic import ValidationError
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from valkey.exceptions import ValkeyError
 
-from src.ai.constants import CEFR_RANK, TAXONOMY, CEFRLevel, PatternCode
+from src.ai.constants import CEFR_RANK, TAXONOMY, CEFRLevel, Language, PatternCode
 from src.ai.exceptions import CardGenerationFailedException
 from src.ai.graph import graph
 from src.ai.llm import structured_prompt_llm
@@ -31,9 +31,13 @@ DRAFT_CACHE_TTL_SECONDS = 86400
 
 class AIService:
     @staticmethod
-    def _draft_cache_key(sentence: str, cefr_level: CEFRLevel) -> str:
+    def _draft_cache_key(
+        sentence: str,
+        cefr_level: CEFRLevel,
+        language: Language = Language.DE,
+    ) -> str:
         digest = hashlib.sha256(sentence.strip().encode("utf-8")).hexdigest()
-        return f"ai:draft:{cefr_level}:{digest}"
+        return f"ai:draft:{language}:{cefr_level}:{digest}"
 
     @staticmethod
     async def analyze_draft(
@@ -41,11 +45,14 @@ class AIService:
         learner: LearnerProfile | None = None,
         db: AsyncSession | None = None,
         is_revision: bool = False,
+        repaired_patterns: list[PatternCode] | None = None,
     ) -> EnrichedAnalysis:
         if learner is None:
             learner = LearnerProfile()
 
-        cache_key = AIService._draft_cache_key(sentence, learner.cefr_level)
+        cache_key = AIService._draft_cache_key(
+            sentence, learner.cefr_level, learner.language
+        )
         analysis: Analysis | None = None
 
         try:
@@ -63,6 +70,7 @@ class AIService:
                 "critique": "",
                 "iterations": 0,
                 "cefr_level": learner.cefr_level,
+                "language": learner.language,
             }
 
             final_state: State = cast(State, await graph.ainvoke(initial_state))
@@ -82,15 +90,23 @@ class AIService:
             except ValkeyError:
                 pass
 
+        if learner.user_id is not None and db is not None:
+            if not is_revision and analysis.cards:
+                await AIService.record_user_error(
+                    db=db, user_id=learner.user_id, cards=analysis.cards
+                )
+            elif is_revision and repaired_patterns:
+                remaining = {card.pattern_code for card in analysis.cards}
+                healed = [code for code in repaired_patterns if code not in remaining]
+
+                if healed:
+                    await AIService.heal_user_errors(
+                        db=db, user_id=learner.user_id, patterns=healed
+                    )
         if not analysis.cards:
             return EnrichedAnalysis(
                 cards=[],
                 confirmed_hypotheses=analysis.confirmed_hypotheses,
-            )
-
-        if learner.user_id is not None and db is not None and not is_revision:
-            await AIService.record_user_error(
-                db=db, user_id=learner.user_id, cards=analysis.cards
             )
 
         enriched_cards = [
@@ -139,7 +155,10 @@ class AIService:
 
     @staticmethod
     async def get_top_weaknesses(
-        db: AsyncSession, user_id: int, user_cefr: CEFRLevel
+        db: AsyncSession,
+        user_id: int,
+        user_cefr: CEFRLevel,
+        language: Language = Language.DE,
     ) -> list[PatternCode]:
         stmt = select(UserErrorLedger).where(UserErrorLedger.user_id == user_id)
         result = await db.execute(stmt)
@@ -149,9 +168,12 @@ class AIService:
         user_rank = CEFR_RANK[user_cefr]
 
         for row in rows:
-            code = PatternCode(row.pattern_code)
+            try:
+                code = PatternCode(row.pattern_code)
+            except ValueError:
+                continue
             meta = TAXONOMY[code]
-            if not meta["treatable"]:
+            if meta["language"] != language or not meta["treatable"]:
                 continue
 
             pattern_rank = CEFR_RANK[meta["cefr"]]
@@ -164,18 +186,48 @@ class AIService:
 
     @staticmethod
     async def generate_writing_prompt(
-        db: AsyncSession, user_id: int | None, user_cefr: CEFRLevel
+        db: AsyncSession,
+        user_id: int | None,
+        user_cefr: CEFRLevel,
+        language: Language = Language.DE,
     ) -> WritingPromptResponse:
         weaknesses = (
             await AIService.get_top_weaknesses(
-                db=db, user_id=user_id, user_cefr=user_cefr
+                db=db, user_id=user_id, user_cefr=user_cefr, language=language
             )
             if user_id is not None
             else []
         )
         messages = build_writing_prompt_messages(
-            cefr_level=user_cefr, target_patterns=weaknesses
+            cefr_level=user_cefr, target_patterns=weaknesses, language=language
         )
         return cast(
             WritingPromptResponse, await structured_prompt_llm.ainvoke(messages)
         )
+
+    @staticmethod
+    async def heal_user_errors(
+        db: AsyncSession, user_id: int, patterns: list[PatternCode]
+    ) -> None:
+        if not patterns:
+            return
+
+        counts = Counter(patterns)
+        for code, count in counts.items():
+            await db.execute(
+                update(UserErrorLedger)
+                .where(
+                    UserErrorLedger.user_id == user_id,
+                    UserErrorLedger.pattern_code == code,
+                )
+                .values(error_count=UserErrorLedger.error_count - count)
+            )
+
+        await db.execute(
+            delete(UserErrorLedger).where(
+                UserErrorLedger.user_id == user_id,
+                UserErrorLedger.error_count <= 0,
+            )
+        )
+
+        await db.commit()

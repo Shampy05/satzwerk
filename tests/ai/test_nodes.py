@@ -1,4 +1,4 @@
-from src.ai.constants import PatternCode
+from src.ai.constants import Language, PatternCode
 from src.ai.nodes import deterministic_evaluator
 from src.ai.schema import Analysis, GermanCard
 from src.ai.state import State
@@ -125,4 +125,47 @@ def test_locate_sentence_with_inline_markers_and_multiple_sentences():
     assert locate_sentence(draft, "?zu den? Bahnhof") == 0
     assert locate_sentence(draft, "weil ich habe keine Zeit") == 0
     assert locate_sentence(draft, "Gestern ich habe") == 1
+
+
+def test_evaluator_passes_valid_french_card():
+    card = GermanCard(
+        quote="?à le? cinéma",
+        pattern_code=PatternCode.FR_PREP,
+        explanation="The preposition 'à' must contract with the masculine singular definite article.",
+        correction="au cinéma",
+    )
+    state: State = {
+        "sentence": "Je vais ?à le? cinéma ce soir.",
+        "analysis": Analysis(cards=[card], confirmed_hypotheses=[]),
+        "critique": "",
+        "is_valid": False,
+        "iterations": 0,
+        "language": Language.FR,
+    }
+
+    result = deterministic_evaluator(state)
+    assert result["is_valid"] is True
+    assert result["critique"] == ""
+
+
+def test_evaluator_rejects_cross_language_taxonomy_code():
+    card = GermanCard(
+        quote="?à le? cinéma",
+        pattern_code=PatternCode.KAS_PREP,  # German code on a French draft!
+        explanation="The preposition 'à' must contract with the masculine singular definite article.",
+        correction="au cinéma",
+    )
+    state: State = {
+        "sentence": "Je vais ?à le? cinéma ce soir.",
+        "analysis": Analysis(cards=[card], confirmed_hypotheses=[]),
+        "critique": "",
+        "is_valid": False,
+        "iterations": 0,
+        "language": Language.FR,
+    }
+
+    result = deterministic_evaluator(state)
+    assert result["is_valid"] is False
+    assert "belongs to language 'de'" in result["critique"]
+
 

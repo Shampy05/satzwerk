@@ -4,7 +4,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.ai.constants import CEFRLevel, PatternCode
+from src.ai.constants import CEFRLevel, Language, PatternCode
 from src.ai.schema import (
     Analysis,
     EnrichedAnalysis,
@@ -291,5 +291,122 @@ class TestErrorLedgerAndPrompts:
         )
         assert res.cards == []
         assert res.confirmed_hypotheses == ["dem Mann"]
+
+    async def test_french_error_ledger_isolation_and_router(
+        self, client: AsyncClient, db_session: AsyncSession, verified_user: User
+    ):
+        verified_user.cefr_level = CEFRLevel.B1
+        await db_session.commit()
+
+        # Record both German and French errors for the same user
+        await AIService.record_user_error(
+            db_session,
+            verified_user.id,
+            [
+                GermanCard(
+                    quote="zu den",
+                    pattern_code=PatternCode.KAS_PREP,
+                    explanation="dative required",
+                    correction="zum",
+                ),
+                GermanCard(
+                    quote="à le",
+                    pattern_code=PatternCode.FR_PREP,
+                    explanation="contraction required",
+                    correction="au",
+                ),
+                GermanCard(
+                    quote="ai allé",
+                    pattern_code=PatternCode.FR_AUX,
+                    explanation="être required",
+                    correction="suis allé",
+                ),
+            ],
+        )
+
+        access_token, _ = create_tokens(subject=verified_user.id)
+
+        # Query German weaknesses -> only German codes
+        res_de = await client.get(
+            "/ai/weaknesses?language=de",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        assert res_de.status_code == 200
+        assert res_de.json() == ["KAS-PREP"]
+
+        # Query French weaknesses -> only French codes
+        res_fr = await client.get(
+            "/ai/weaknesses?language=fr",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        assert res_fr.status_code == 200
+        assert set(res_fr.json()) == {"FR-PREP", "FR-AUX"}
+
+    @patch("src.ai.service.graph")
+    async def test_error_ledger_healing_on_revision(
+        self,
+        mock_graph: AsyncMock,
+        db_session: AsyncSession,
+        verified_user: User,
+    ):
+        learner = LearnerProfile(user_id=verified_user.id, cefr_level=CEFRLevel.B1)
+
+        # 1. Initial draft has 1 KAS-PREP error and 1 WO-VF error
+        await AIService.record_user_error(
+            db_session,
+            verified_user.id,
+            [
+                GermanCard(
+                    quote="zu den Bahnhof",
+                    pattern_code=PatternCode.KAS_PREP,
+                    explanation="dative required",
+                    correction="zum Bahnhof",
+                ),
+                GermanCard(
+                    quote="weil ich habe keine Zeit",
+                    pattern_code=PatternCode.WO_VF,
+                    explanation="verb at end",
+                    correction="weil ich keine Zeit habe",
+                ),
+            ],
+        )
+
+        weaknesses_before = await AIService.get_top_weaknesses(
+            db_session, verified_user.id, CEFRLevel.B1
+        )
+        assert set(weaknesses_before) == {PatternCode.KAS_PREP, PatternCode.WO_VF}
+
+        # 2. Learner revises draft and fixes KAS-PREP (without L5 spoiler), while WO-VF remains
+        wo_card = GermanCard(
+            quote="weil ich habe keine Zeit",
+            pattern_code=PatternCode.WO_VF,
+            explanation="verb at end",
+            correction="weil ich keine Zeit habe",
+        )
+        mock_graph.ainvoke = AsyncMock(
+            return_value={
+                "sentence": "Ich gehe zum Bahnhof, weil ich habe keine Zeit.",
+                "analysis": Analysis(cards=[wo_card], confirmed_hypotheses=[]),
+                "is_valid": True,
+                "critique": "",
+                "iterations": 1,
+            }
+        )
+
+        await AIService.analyze_draft(
+            sentence="Ich gehe zum Bahnhof, weil ich habe keine Zeit.",
+            learner=learner,
+            db=db_session,
+            is_revision=True,
+            repaired_patterns=[PatternCode.KAS_PREP, PatternCode.WO_VF],
+        )
+
+        # KAS-PREP should be healed (count 1 -> 0 -> deleted), leaving only WO-VF!
+        weaknesses_after = await AIService.get_top_weaknesses(
+            db_session, verified_user.id, CEFRLevel.B1
+        )
+        assert weaknesses_after == [PatternCode.WO_VF]
+
+
 
 

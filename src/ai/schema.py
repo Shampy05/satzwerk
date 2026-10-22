@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from src.ai.constants import CEFRLevel, PatternCode
+from src.ai.constants import CEFRLevel, Language, PatternCode
 
 
 class GermanCard(BaseModel):
@@ -27,7 +27,9 @@ class EnrichedGermanCard(GermanCard):
 class GenerateCardRequest(BaseModel):
     sentence: str
     target_level: CEFRLevel | None = None
+    language: Language | None = None
     is_revision: bool = False
+    repaired_patterns: list[PatternCode] = []
 
 
 class Analysis(BaseModel):
@@ -60,11 +62,12 @@ class SemanticEvaluation(BaseModel):
 class LearnerProfile(BaseModel):
     user_id: int | None = None
     cefr_level: CEFRLevel = CEFRLevel.A1
+    language: Language = Language.DE
 
 
 class WritingPromptResponse(BaseModel):
     prompt: str = Field(
-        description="A short writing task in English with specific German grammar constraints for the learner"
+        description="A short writing task in English with specific target-language grammar constraints for the learner"
     )
     target_patterns: list[PatternCode] = Field(
         description="The grammar pattern codes targetted by this writing prompt"

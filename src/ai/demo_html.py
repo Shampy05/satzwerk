@@ -1,167 +1,339 @@
-DEMO_HTML = """<!DOCTYPE html>
+DEMO_HTML = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Satzwerk — Closed-Loop 5-Rung SLA Studio</title>
+  <title>Satzwerk</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    .hidden-rung { display: none !important; }
+    body {
+      background-color: #F8FAFC;
+      color: #0F172A;
+      -webkit-font-smoothing: antialiased;
+    }
+    .hidden-rung {
+      display: none !important;
+    }
+    .error-underline {
+      text-decoration: underline;
+      text-decoration-color: #E11D48;
+      text-decoration-style: wavy;
+      text-decoration-thickness: 1.5px;
+      text-underline-offset: 4px;
+    }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen py-10 px-4 font-sans">
-  <div class="max-w-3xl mx-auto space-y-6">
-    <!-- Header -->
-    <header class="border-b border-slate-800 pb-4">
-      <div class="flex items-center justify-between flex-wrap gap-2">
-        <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-          <span>⚡</span> Satzwerk
-        </h1>
-        <div class="flex items-center gap-2">
-          <label for="cefrSelect" class="text-xs text-slate-400 font-medium">Target CEFR:</label>
-          <select id="cefrSelect" onchange="onLevelChange()" class="bg-slate-800 border border-slate-700 text-indigo-300 text-xs font-mono rounded-lg px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            <option value="A1">A1 (Foundation)</option>
-            <option value="A2">A2 (Elementary)</option>
-            <option value="B1" selected>B1 (Intermediate)</option>
-            <option value="B2">B2 (Upper-Int)</option>
-          </select>
-          <span class="text-xs px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-mono">
-            Closed-Loop SLA
-          </span>
-        </div>
-      </div>
-      <p class="text-sm text-slate-400 mt-1">
-        Active German morphosyntactic production:
-        <span class="text-indigo-400 font-medium">L1 Locate</span> &rarr;
-        <span class="text-amber-400 font-medium">L2 Underline</span> &rarr;
-        <span class="text-sky-400 font-medium">L3 Category Badge</span> &rarr;
-        <span class="text-amber-300 font-medium">L4 Rule Hint</span> &rarr;
-        <span class="text-emerald-400 font-medium">L5 Rewrite</span>.
-      </p>
-    </header>
+<body class="min-h-screen font-sans">
 
-    <!-- Optional Auth / Error Ledger Bar -->
-    <div class="bg-slate-800/40 rounded-xl p-4 border border-slate-700/50 space-y-3">
-      <div class="flex items-center justify-between gap-3 flex-wrap">
-        <div class="flex items-center gap-2 flex-1 min-w-[240px]">
-          <span class="text-xs font-semibold text-slate-400 shrink-0">🔑 JWT Token (Optional):</span>
-          <input id="jwtInput" type="password" oninput="onTokenChange()" placeholder="Paste access_token to enable PostgreSQL Error Ledger..." class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1 text-xs font-mono text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-        </div>
-        <button onclick="fetchWeaknesses()" class="text-xs px-3 py-1 rounded-lg bg-slate-700/60 hover:bg-slate-700 text-slate-300 border border-slate-600/50 transition">
-          📊 Refresh Ledger
-        </button>
-      </div>
-      <div id="ledgerBar" class="flex items-center gap-2 flex-wrap text-xs">
-        <span class="text-slate-500">Top Weaknesses (Error Ledger):</span>
-        <span id="ledgerBadges" class="text-slate-400 italic">Guest mode (paste JWT token to track &amp; weight personal errors)</span>
-      </div>
+  <!-- Minimal Top Navigation -->
+  <header class="max-w-2xl mx-auto px-4 pt-8 pb-4 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-2.5">
+      <div class="w-2.5 h-2.5 rounded-full bg-zinc-900"></div>
+      <span class="font-semibold text-lg tracking-tight text-zinc-900">Satzwerk</span>
     </div>
 
-    <!-- Step 1: Playful Writing Prompt Elicitation Card -->
-    <div class="bg-gradient-to-br from-indigo-950/50 via-slate-800/70 to-slate-800/60 rounded-xl p-5 border border-indigo-500/30 space-y-3 shadow-lg">
+    <div class="flex items-center gap-2">
+      <!-- Language Pill -->
+      <div class="inline-flex bg-zinc-200/70 p-0.5 rounded-lg text-xs font-medium">
+        <button type="button" onclick="selectLanguage('de')" data-lang="de" class="lang-btn px-2.5 py-1 rounded-md transition bg-white text-zinc-900 shadow-sm">German</button>
+        <button type="button" onclick="selectLanguage('fr')" data-lang="fr" class="lang-btn px-2.5 py-1 rounded-md transition text-zinc-600 hover:text-zinc-900">French</button>
+      </div>
+      <select id="languageSelect" onchange="onLanguageChange()" class="sr-only" aria-hidden="true">
+        <option value="de" selected>de</option>
+        <option value="fr">fr</option>
+      </select>
+
+      <!-- CEFR Level Pill -->
+      <div class="inline-flex bg-zinc-200/70 p-0.5 rounded-lg text-xs font-medium">
+        <button type="button" onclick="selectCefr('A1')" data-cefr="A1" class="cefr-btn px-2 py-1 rounded-md transition text-zinc-600 hover:text-zinc-900">A1</button>
+        <button type="button" onclick="selectCefr('A2')" data-cefr="A2" class="cefr-btn px-2 py-1 rounded-md transition text-zinc-600 hover:text-zinc-900">A2</button>
+        <button type="button" onclick="selectCefr('B1')" data-cefr="B1" class="cefr-btn px-2 py-1 rounded-md transition bg-white text-zinc-900 shadow-sm">B1</button>
+        <button type="button" onclick="selectCefr('B2')" data-cefr="B2" class="cefr-btn px-2 py-1 rounded-md transition text-zinc-600 hover:text-zinc-900">B2</button>
+      </div>
+      <select id="cefrSelect" onchange="onLevelChange()" class="sr-only" aria-hidden="true">
+        <option value="A1">A1</option>
+        <option value="A2">A2</option>
+        <option value="B1" selected>B1</option>
+        <option value="B2">B2</option>
+      </select>
+
+      <!-- Subtle Ledger / Auth Toggle -->
+      <button
+        type="button"
+        onclick="toggleLedgerDrawer()"
+        title="Personal Error Ledger"
+        class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/60 transition"
+      >
+        <span id="authStatusDot" class="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>
+        <span>Ledger</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-2xl mx-auto px-4 pb-16 space-y-5">
+
+    <!-- Collapsible Personal Error Ledger Drawer (Hidden by default) -->
+    <div id="ledgerDrawer" class="hidden bg-white rounded-xl border border-zinc-200/80 p-4 shadow-sm space-y-3">
       <div class="flex items-center justify-between gap-2 flex-wrap">
-        <div class="flex items-center gap-2">
-          <span class="text-xs font-semibold uppercase tracking-wider text-indigo-400">Step 1 &bull; Elicitation Prompt</span>
-          <div id="promptTargets" class="flex items-center gap-1.5"></div>
+        <span class="text-xs font-medium text-zinc-700">Personal Error Ledger</span>
+        <div id="ledgerBadges" class="flex items-center gap-1.5 flex-wrap text-xs text-zinc-500">
+          <span>Guest mode — add token to track recurring grammar gaps</span>
         </div>
-        <button id="promptBtn" onclick="generatePrompt()" class="text-xs px-3.5 py-1.5 rounded-lg bg-indigo-600/80 hover:bg-indigo-500 text-white font-medium transition flex items-center gap-1.5 shadow">
-          <span id="promptSpinner" class="hidden animate-spin">&#9696;</span>
-          <span id="promptBtnText">🎲 Generate Fun Writing Prompt</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <input
+          id="jwtInput"
+          type="password"
+          oninput="onTokenChange()"
+          placeholder="Paste Bearer access_token (optional)..."
+          class="flex-1 bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-1.5 text-xs font-mono text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-zinc-400"
+        />
+        <button
+          type="button"
+          onclick="fetchWeaknesses()"
+          class="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition"
+        >
+          Sync
         </button>
-      </div>
-      <p id="promptText" class="text-sm text-slate-200 leading-relaxed">
-        Click <strong>"🎲 Generate Fun Writing Prompt"</strong> to get a playful scenario tailored to your CEFR level and Error Ledger weaknesses—or write freely below!
-      </p>
-    </div>
-
-    <!-- Step 2: Draft & Multi-Attempt Revision Box -->
-    <div class="bg-slate-800/60 rounded-xl p-5 border border-slate-700/60 space-y-4 shadow-xl">
-      <div class="flex items-center justify-between flex-wrap gap-2">
-        <div class="flex items-center gap-2.5">
-          <label for="draftInput" class="text-sm font-semibold text-slate-300">Step 2 &bull; Your German Draft</label>
-          <span id="attemptBadge" class="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300 font-mono border border-slate-600">
-            Attempt #1 (Initial Draft)
-          </span>
-        </div>
-        <span class="text-xs text-slate-400">Wrap uncertain words with <code class="text-indigo-300 bg-slate-900 px-1 py-0.5 rounded border border-slate-700">?words?</code></span>
-      </div>
-
-      <textarea id="draftInput" rows="4" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-200 placeholder-slate-600 font-mono" placeholder="e.g. Ich gehe ?zu den? Bahnhof, weil ich habe keine Zeit.">Ich gehe ?zu den? Bahnhof, weil ich habe keine Zeit.</textarea>
-
-      <!-- Revision Guidance Banner (Shown when user is on Attempt 2+ or has active errors) -->
-      <div id="revisionBanner" class="hidden text-xs bg-amber-950/40 border border-amber-700/50 text-amber-200 p-3 rounded-lg flex items-center justify-between gap-3">
-        <div>
-          <strong>🔄 Self-Repair Mode:</strong> Use the L1–L4 hints below to edit your sentence above and click <strong>"Re-Submit Revised Draft"</strong> to see if you fixed the errors on your own! <em>(Revisions don't double-penalize your Error Ledger.)</em>
-        </div>
-        <button onclick="resetDraftAttempt()" class="shrink-0 text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 transition">
-          New Draft
-        </button>
-      </div>
-
-      <div class="flex items-center justify-between pt-1 flex-wrap gap-2">
-        <div class="flex gap-2 flex-wrap">
-          <button onclick="setExample(1)" class="text-xs px-2.5 py-1 rounded bg-slate-700/50 hover:bg-slate-700 text-slate-300 transition">Example 1 (Case &amp; WO)</button>
-          <button onclick="setExample(2)" class="text-xs px-2.5 py-1 rounded bg-slate-700/50 hover:bg-slate-700 text-slate-300 transition">Example 2 (Valid ?Hypothesis?)</button>
-          <button onclick="setExample(3)" class="text-xs px-2.5 py-1 rounded bg-slate-700/50 hover:bg-slate-700 text-slate-300 transition">Example 3 (Clean Draft)</button>
-        </div>
-        <button id="analyzeBtn" onclick="analyzeDraft()" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition shadow-lg shadow-indigo-600/30 flex items-center gap-2">
-          <span id="btnSpinner" class="hidden animate-spin">&#9696;</span>
-          <span id="btnText">Analyze Draft (Attempt #1)</span>
-        </button>
-      </div>
-
-      <!-- Live Pipeline Status Progress -->
-      <div id="statusIndicator" class="hidden text-xs text-indigo-300 bg-indigo-950/40 border border-indigo-800/40 p-2.5 rounded-lg flex items-center gap-2 animate-pulse">
-        <span>🔄</span> <span id="statusText">Running 2-stage verification (Generator &rarr; Deterministic Gate &rarr; Critic LLM)...</span>
       </div>
     </div>
 
-    <!-- Confirmed Hypotheses Banner -->
-    <div id="confirmedBanner" class="hidden p-4 rounded-xl text-sm border bg-emerald-950/30 border-emerald-700/50 text-emerald-200 space-y-1"></div>
+    <!-- Unified Writing Studio Card -->
+    <div class="bg-white rounded-2xl border border-zinc-200/90 shadow-sm overflow-hidden">
 
-    <!-- Error/Notice Banner -->
-    <div id="noticeBanner" class="hidden p-4 rounded-xl text-sm border"></div>
-
-    <!-- Results Section -->
-    <div id="resultsSection" class="space-y-4 hidden">
-      <div class="flex items-center justify-between">
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400">Detected Feedback Cards (5-Rung Ladder)</h2>
-        <span id="cardCount" class="text-xs text-slate-500"></span>
+      <!-- Top Prompt Bar inside the Card -->
+      <div class="px-5 py-3.5 bg-zinc-50/70 border-b border-zinc-100 flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-medium text-zinc-500">Writing Prompt</span>
+          <div id="promptTargets" class="flex items-center gap-1"></div>
+        </div>
+        <button
+          id="promptBtn"
+          type="button"
+          onclick="generatePrompt()"
+          class="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-950 bg-white hover:bg-zinc-50 border border-zinc-200/90 rounded-lg px-2.5 py-1 shadow-2xs transition"
+        >
+          <svg id="promptSpinner" class="hidden animate-spin w-3 h-3 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9" stroke-opacity="0.25"></circle>
+            <path d="M21 12a9 9 0 0 1-9 9"></path>
+          </svg>
+          <span id="promptBtnText">Generate Topic</span>
+        </button>
       </div>
-      <div id="cardsContainer" class="space-y-4"></div>
+
+      <!-- Generated Prompt Text (Only shown when a topic is generated) -->
+      <div id="promptBox" class="hidden px-5 py-3.5 bg-zinc-50/40 border-b border-zinc-100">
+        <p id="promptText" class="text-sm text-zinc-700 leading-relaxed"></p>
+      </div>
+
+      <!-- Revision Mode Banner (Only shown on Attempt 2+) -->
+      <div id="revisionBanner" class="hidden px-5 py-2.5 bg-amber-50/80 border-b border-amber-200/60 flex items-center justify-between gap-3 text-xs text-amber-900">
+        <span>
+          <strong class="font-medium">Revision mode:</strong> Use the hints below to fix your sentence and check again.
+        </span>
+        <button
+          type="button"
+          onclick="resetDraftAttempt()"
+          class="text-xs font-medium text-amber-800 hover:text-amber-950 underline underline-offset-2 shrink-0"
+        >
+          Start over
+        </button>
+      </div>
+
+      <!-- Main Textarea -->
+      <div class="p-5">
+        <textarea
+          id="draftInput"
+          rows="4"
+          onkeydown="handleEditorKeydown(event)"
+          class="w-full bg-transparent text-base sm:text-[17px] text-zinc-900 leading-relaxed placeholder-zinc-400 focus:outline-none resize-y"
+          placeholder="Write a sentence or short paragraph..."
+        >Ich gehe ?zu den? Bahnhof, weil ich habe keine Zeit.</textarea>
+      </div>
+
+      <!-- Confirmed Hypotheses Banner -->
+      <div id="confirmedBanner" class="hidden mx-5 mb-4 px-3.5 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200/70 text-xs text-emerald-900"></div>
+
+      <!-- Card Footer Toolbar -->
+      <div class="px-5 py-3 bg-zinc-50/50 border-t border-zinc-100 flex items-center justify-between flex-wrap gap-3">
+        <!-- Quick Examples & ? Tip -->
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="text-xs text-zinc-400 mr-1">Try:</span>
+          <button type="button" onclick="setExample(1)" class="text-xs px-2 py-1 rounded-md text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/50 transition">Example 1</button>
+          <button type="button" onclick="setExample(2)" class="text-xs px-2 py-1 rounded-md text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/50 transition">?Unsure? words</button>
+          <button type="button" onclick="setExample(3)" class="text-xs px-2 py-1 rounded-md text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/50 transition">Clean sentence</button>
+        </div>
+
+        <!-- Primary Action Button -->
+        <div class="flex items-center gap-2.5 ml-auto">
+          <span id="attemptBadge" class="hidden text-xs font-medium text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-md"></span>
+          <button
+            id="analyzeBtn"
+            type="button"
+            onclick="analyzeDraft()"
+            class="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition shadow-xs inline-flex items-center gap-2"
+          >
+            <svg id="btnSpinner" class="hidden animate-spin w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="9" stroke-opacity="0.25"></circle>
+              <path d="M21 12a9 9 0 0 1-9 9"></path>
+            </svg>
+            <span id="btnText">Check Writing</span>
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
+
+    <!-- Subtle Loading Status -->
+    <div id="statusIndicator" class="hidden text-center py-2 text-xs text-zinc-500 animate-pulse">
+      <span id="statusText">Checking grammar...</span>
+    </div>
+
+    <!-- Clean / Notice Banner -->
+    <div id="noticeBanner" class="hidden p-4 rounded-2xl text-sm border"></div>
+
+    <!-- Feedback Cards Section (Hidden until analysis finds errors) -->
+    <div id="resultsSection" class="hidden space-y-3">
+      <div class="flex items-center justify-between px-1">
+        <span class="text-xs font-medium text-zinc-500">Feedback</span>
+        <span id="cardCount" class="text-xs text-zinc-400"></span>
+      </div>
+      <div id="cardsContainer" class="space-y-3"></div>
+    </div>
+
+  </main>
 
   <script>
     const TAXONOMY_DESCRIPTIONS = {
-      "WO-V2": { name: "Verb-Second in Main Clauses", cefr: "A1", hint: "The finite verb must be the second constituent." },
-      "WO-SEP": { name: "Separable-Verb Split", cefr: "A1", hint: "Separable prefix moves to the clause end." },
-      "WO-VF": { name: "Verb-Final in Subordinate Clauses", cefr: "A2", hint: "Finite verb goes to the end after weil/dass/wenn/ob." },
-      "WO-KLAM": { name: "Verbal Bracket (Satzklammer)", cefr: "A1", hint: "Participle or infinitive stays at the very end." },
-      "WO-TMP": { name: "TeKaMoLo Ordering", cefr: "B1", hint: "Adverbial order: Temporal before Manner before Place." },
-      "KAS-AKK": { name: "Accusative Direct Object", cefr: "A1", hint: "Direct objects take accusative case." },
-      "KAS-DAT": { name: "Dative Object / Dative Verb", cefr: "A2", hint: "Indirect objects or dative verbs (helfen, danken) take dative." },
-      "KAS-GEN": { name: "Genitive Case", cefr: "B2", hint: "Possession or genitive prepositions (wegen, während, trotz)." },
-      "KAS-PREP": { name: "Fixed Preposition Case", cefr: "A2", hint: "mit/aus/bei/nach/von/zu require Dative; für/ohne/gegen require Accusative." },
-      "KAS-2WEG": { name: "Two-Way Preposition (Wechselpräposition)", cefr: "A2", hint: "Accusative for direction/motion, Dative for fixed location." },
-      "ADJ-END": { name: "Adjective Declension", cefr: "B1", hint: "Adjective ending must match the article and case pattern." },
-      "ART-GEN": { name: "Article & Gender Agreement", cefr: "A1", hint: "The determiner must match the grammatical gender of the noun." },
-      "N-PL": { name: "Plural Formation", cefr: "A1", hint: "Incorrect plural noun ending." },
-      "PRO-REL": { name: "Relative Pronoun", cefr: "B1", hint: "Relative pronoun agrees in gender/number with antecedent." },
-      "PRO-KAS": { name: "Pronoun Case Reference", cefr: "A2", hint: "Check personal pronoun case (mir vs. mich, ihm vs. ihn)." },
-      "V-KONJ": { name: "Verb Conjugation", cefr: "A1", hint: "Subject-verb agreement or stem vowel change in present tense." },
-      "V-TEMP": { name: "Tense Formation", cefr: "A2", hint: "Perfekt auxiliary (haben vs. sein) or past tense form." },
-      "V-PART": { name: "Participle Formation", cefr: "A2", hint: "Formation of Partizip II (ge- prefix, -t vs. -en ending)." },
-      "V-K2": { name: "Konjunktiv II", cefr: "B1", hint: "Hypothetical, polite, or subjunctive verb forms." },
-      "V-REFL": { name: "Reflexive Pronoun", cefr: "A2", hint: "Missing or incorrect reflexive pronoun (sich freuen)." },
-      "PREP-W": { name: "Preposition Choice", cefr: "B1", hint: "Wrong preposition used for a verb or noun idiom." },
+      // German (DE)
+      "WO-V2": { name: "Verb-Second Word Order", cefr: "A1", hint: "The conjugated verb must be the second element in a main clause." },
+      "WO-SEP": { name: "Separable Verb", cefr: "A1", hint: "The separable prefix moves to the end of the clause." },
+      "WO-VF": { name: "Subordinate Clause Word Order", cefr: "A2", hint: "The conjugated verb goes to the very end after words like weil, dass, or wenn." },
+      "WO-KLAM": { name: "Sentence Bracket", cefr: "A1", hint: "Participles and infinitives go to the end of the clause." },
+      "WO-TMP": { name: "Time–Manner–Place Order", cefr: "B1", hint: "Order expressions as: Time before Manner before Place." },
+      "KAS-AKK": { name: "Accusative Case", cefr: "A1", hint: "Direct objects take the accusative case." },
+      "KAS-DAT": { name: "Dative Case", cefr: "A2", hint: "Indirect objects and dative verbs (like helfen or danken) take dative." },
+      "KAS-GEN": { name: "Genitive Case", cefr: "B2", hint: "Used for possession and after prepositions like wegen, trotz, während." },
+      "KAS-PREP": { name: "Preposition Case", cefr: "A2", hint: "mit/zu/aus/bei/nach/von require Dative; für/ohne/gegen require Accusative." },
+      "KAS-2WEG": { name: "Two-Way Preposition", cefr: "A2", hint: "Use accusative for movement/direction and dative for static location." },
+      "ADJ-END": { name: "Adjective Ending", cefr: "B1", hint: "Adjective ending must match the article, gender, and case." },
+      "ART-GEN": { name: "Noun Gender & Article", cefr: "A1", hint: "The article must match the grammatical gender of the noun." },
+      "N-PL": { name: "Plural Form", cefr: "A1", hint: "Check the plural ending of the noun." },
+      "PRO-REL": { name: "Relative Pronoun", cefr: "B1", hint: "Matches the gender/number of the noun it refers to, and case from its role." },
+      "PRO-KAS": { name: "Pronoun Case", cefr: "A2", hint: "Check personal pronoun case (e.g., mir vs. mich, ihm vs. ihn)." },
+      "V-KONJ": { name: "Verb Conjugation", cefr: "A1", hint: "Verb ending or stem must match the subject." },
+      "V-TEMP": { name: "Tense & Auxiliary", cefr: "A2", hint: "Check past auxiliary (haben vs. sein) or tense choice." },
+      "V-PART": { name: "Past Participle", cefr: "A2", hint: "Check Partizip II spelling (ge- prefix and -t/-en ending)." },
+      "V-K2": { name: "Konjunktiv II", cefr: "B1", hint: "Used for hypothetical or polite statements (würde, hätte, wäre, könnte)." },
+      "V-REFL": { name: "Reflexive Pronoun", cefr: "A2", hint: "Missing or incorrect reflexive pronoun (mich/dich/sich)." },
+      "PREP-W": { name: "Preposition Choice", cefr: "B1", hint: "Check which preposition pairs with this verb or expression." },
       "ORTH": { name: "Spelling & Capitalization", cefr: "A1", hint: "Check noun capitalization, umlauts, or ß/ss." },
-      "WORTW": { name: "Word Choice", cefr: "B2", hint: "Grammatically valid but unidiomatic German phrasing." },
-      "SONST": { name: "General Syntax / Other", cefr: "B2", hint: "Grammar issue not covered by other specific codes." }
+      "WORTW": { name: "Word Choice", cefr: "B2", hint: "Grammatically valid, but another word sounds more natural." },
+      "SONST": { name: "General Grammar", cefr: "B2", hint: "General sentence structure issue." },
+
+      // French (FR)
+      "FR-GEN": { name: "Noun Gender & Article", cefr: "A1", hint: "The article (le/la, un/une, ce/cette) must match the noun's gender." },
+      "FR-ADJ": { name: "Adjective Agreement & Position", cefr: "A1", hint: "Adjectives agree in gender/number and usually follow the noun (except BAGS)." },
+      "FR-ART": { name: "Partitive & Article Choice", cefr: "A2", hint: "Use du/de la/des for unspecified quantities, or 'de' after negation." },
+      "FR-CONJ": { name: "Verb Conjugation", cefr: "A1", hint: "Verb ending must match the subject." },
+      "FR-AUX": { name: "Auxiliary (être vs. avoir)", cefr: "A2", hint: "Motion verbs (aller, venir, partir...) and reflexive verbs use être in the past." },
+      "FR-PP": { name: "Past Participle Agreement", cefr: "B1", hint: "Check participle ending (-é/-i/-u) and agreement with être or preceding object." },
+      "FR-IMP": { name: "Passé Composé vs. Imparfait", cefr: "A2", hint: "Use passé composé for completed actions and imparfait for ongoing background." },
+      "FR-SUBJ": { name: "Subjunctive Mood", cefr: "B1", hint: "Use the subjunctive after expressions of necessity, emotion, doubt, or bien que." },
+      "FR-COND": { name: "Conditional & Si-Clauses", cefr: "B1", hint: "Use imparfait after 'si' and conditional in the result clause." },
+      "FR-REFL": { name: "Reflexive Verb", cefr: "A2", hint: "Missing or incorrect reflexive pronoun (me/te/se/nous/vous)." },
+      "FR-CLIT": { name: "Object Pronoun Order", cefr: "B1", hint: "Check pronoun choice (le/la/lui/leur/y/en) and place it before the verb." },
+      "FR-NEG": { name: "Negation Placement", cefr: "A1", hint: "Place ne ... pas around the conjugated verb or auxiliary." },
+      "FR-REL": { name: "Relative Pronoun (qui/que/dont/où)", cefr: "B1", hint: "Use qui for subject, que for direct object, dont for 'de', où for place/time." },
+      "FR-PREP": { name: "Prepositions & Contractions", cefr: "A1", hint: "Contract à+le → au, à+les → aux, de+le → du, de+les → des." },
+      "FR-INF": { name: "Verb + Infinitive Preposition", cefr: "B1", hint: "Check whether the verb takes à, de, or nothing before an infinitive." },
+      "FR-ORTH": { name: "Accents & Elision", cefr: "A1", hint: "Check accents (é/è/ê/ç) and elision before a vowel (j'/l'/qu'/n')." },
+      "FR-LEX": { name: "Word Choice", cefr: "B2", hint: "Grammatically valid, but another phrasing is more natural in French." },
+      "FR-AUTRE": { name: "General Grammar", cefr: "B2", hint: "General French sentence structure issue." }
+    };
+
+    const EXAMPLES = {
+      de: {
+        1: "Ich gehe ?zu den? Bahnhof, weil ich habe keine Zeit.",
+        2: "Ich helfe ?dem Mann?, weil ich heute Zeit habe.",
+        3: "Gestern bin ich mit meiner Schwester ins Kino gegangen."
+      },
+      fr: {
+        1: "Hier je ?ai allé? ?à le? cinéma avec mes amis.",
+        2: "Je parle ?au professeur? parce que j'ai une question.",
+        3: "Hier soir, je suis allé au théâtre avec ma sœur."
+      }
     };
 
     let attemptNumber = 1;
     let isRevision = false;
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function selectLanguage(lang) {
+      document.getElementById('languageSelect').value = lang;
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        if (btn.getAttribute('data-lang') === lang) {
+          btn.className = "lang-btn px-2.5 py-1 rounded-md transition bg-white text-zinc-900 shadow-sm";
+        } else {
+          btn.className = "lang-btn px-2.5 py-1 rounded-md transition text-zinc-600 hover:text-zinc-900";
+        }
+      });
+      onLanguageChange();
+    }
+
+    function onLanguageChange() {
+      document.getElementById('promptTargets').innerHTML = '';
+      document.getElementById('promptBox').classList.add('hidden');
+      setExample(1);
+      if (document.getElementById('jwtInput').value.trim()) {
+        fetchWeaknesses();
+      }
+    }
+
+    function selectCefr(level) {
+      document.getElementById('cefrSelect').value = level;
+      document.querySelectorAll('.cefr-btn').forEach(btn => {
+        if (btn.getAttribute('data-cefr') === level) {
+          btn.className = "cefr-btn px-2 py-1 rounded-md transition bg-white text-zinc-900 shadow-sm";
+        } else {
+          btn.className = "cefr-btn px-2 py-1 rounded-md transition text-zinc-600 hover:text-zinc-900";
+        }
+      });
+      onLevelChange();
+    }
+
+    function toggleLedgerDrawer() {
+      document.getElementById('ledgerDrawer').classList.toggle('hidden');
+    }
+
+    function handleEditorKeydown(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        analyzeDraft();
+      }
+    }
 
     function getHeaders() {
       const headers = { 'Content-Type': 'application/json' };
@@ -178,14 +350,13 @@ DEMO_HTML = """<!DOCTYPE html>
       const revBanner = document.getElementById('revisionBanner');
 
       if (isRevision) {
-        badge.textContent = `Attempt #${attemptNumber} (Revision)`;
-        badge.className = "text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono border border-amber-500/40";
-        btnText.textContent = `🔄 Re-Submit Revised Draft (Attempt #${attemptNumber})`;
+        badge.textContent = `Attempt #${attemptNumber}`;
+        badge.classList.remove('hidden');
+        btnText.textContent = "Check Revision";
         revBanner.classList.remove('hidden');
       } else {
-        badge.textContent = "Attempt #1 (Initial Draft)";
-        badge.className = "text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300 font-mono border border-slate-600";
-        btnText.textContent = "Analyze Draft (Attempt #1)";
+        badge.classList.add('hidden');
+        btnText.textContent = "Check Writing";
         revBanner.classList.add('hidden');
       }
     }
@@ -207,36 +378,40 @@ DEMO_HTML = """<!DOCTYPE html>
 
     function onTokenChange() {
       const token = document.getElementById('jwtInput').value.trim();
+      const dot = document.getElementById('authStatusDot');
       if (token) {
+        dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-500";
         fetchWeaknesses();
       } else {
+        dot.className = "w-1.5 h-1.5 rounded-full bg-zinc-400";
         document.getElementById('ledgerBadges').innerHTML =
-          '<span class="text-slate-400 italic">Guest mode (paste JWT token to track &amp; weight personal errors)</span>';
+          '<span>Guest mode — add token to track recurring grammar gaps</span>';
       }
     }
 
     async function fetchWeaknesses() {
       const token = document.getElementById('jwtInput').value.trim();
+      const lang = document.getElementById('languageSelect').value;
       const ledgerBadges = document.getElementById('ledgerBadges');
-      if (!token) {
-        ledgerBadges.innerHTML = '<span class="text-slate-400 italic">Guest mode (paste JWT token to track &amp; weight personal errors)</span>';
-        return;
-      }
+      const dot = document.getElementById('authStatusDot');
+      if (!token) return;
 
       try {
-        const res = await fetch('/ai/weaknesses', { headers: getHeaders() });
-        if (!res.ok) throw new Error('Unauthorized or invalid token');
+        const res = await fetch(`/ai/weaknesses?language=${encodeURIComponent(lang)}`, { headers: getHeaders() });
+        if (!res.ok) throw new Error('Invalid token');
         const codes = await res.json();
+        dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-500";
         if (!codes.length) {
-          ledgerBadges.innerHTML = '<span class="text-emerald-400">No recorded errors in ledger yet!</span>';
+          ledgerBadges.innerHTML = `<span class="text-emerald-600">No recorded ${lang.toUpperCase()} errors yet</span>`;
           return;
         }
-        ledgerBadges.innerHTML = codes.map((code, i) => {
-          const meta = TAXONOMY_DESCRIPTIONS[code] || { name: code, cefr: '?' };
-          return `<span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-mono">#${i + 1} ${code} (${meta.cefr})</span>`;
-        }).join(' ');
+        ledgerBadges.innerHTML = codes.map(code => {
+          const meta = TAXONOMY_DESCRIPTIONS[code] || { name: code };
+          return `<span class="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 font-mono text-xs" title="${escapeHtml(meta.name)}">${escapeHtml(code)}</span>`;
+        }).join('');
       } catch (err) {
-        ledgerBadges.innerHTML = `<span class="text-rose-400">${err.message}</span>`;
+        dot.className = "w-1.5 h-1.5 rounded-full bg-rose-500";
+        ledgerBadges.innerHTML = `<span class="text-rose-600">${escapeHtml(err.message)}</span>`;
       }
     }
 
@@ -244,48 +419,52 @@ DEMO_HTML = """<!DOCTYPE html>
       const btn = document.getElementById('promptBtn');
       const spinner = document.getElementById('promptSpinner');
       const btnText = document.getElementById('promptBtnText');
+      const promptBox = document.getElementById('promptBox');
       const promptText = document.getElementById('promptText');
       const promptTargets = document.getElementById('promptTargets');
       const level = document.getElementById('cefrSelect').value;
+      const lang = document.getElementById('languageSelect').value;
 
       btn.disabled = true;
       spinner.classList.remove('hidden');
       btnText.textContent = "Generating...";
 
       try {
-        const res = await fetch(`/ai/writing_prompt?target_level=${encodeURIComponent(level)}`, {
+        const res = await fetch(`/ai/writing_prompt?target_level=${encodeURIComponent(level)}&language=${encodeURIComponent(lang)}`, {
           headers: getHeaders()
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || data.detail || 'Failed to generate prompt');
 
         promptText.textContent = data.prompt;
+        promptBox.classList.remove('hidden');
         promptTargets.innerHTML = (data.target_patterns || []).map(code => {
-          const meta = TAXONOMY_DESCRIPTIONS[code] || { cefr: '' };
-          return `<span class="text-xs px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono" title="${meta.name || code}">🎯 ${code}</span>`;
+          const meta = TAXONOMY_DESCRIPTIONS[code] || { name: code };
+          return `<span class="text-[11px] px-2 py-0.5 rounded-md bg-zinc-200/70 text-zinc-700 font-mono" title="${escapeHtml(meta.name)}">${escapeHtml(code)}</span>`;
         }).join('');
 
-        // Starting a new prompt resets the attempt counter to Attempt #1
         resetDraftAttempt();
       } catch (err) {
-        promptText.innerHTML = `<span class="text-rose-400">Error: ${err.message}</span>`;
+        promptText.innerHTML = `<span class="text-rose-600">${escapeHtml(err.message)}</span>`;
+        promptBox.classList.remove('hidden');
       } finally {
         btn.disabled = false;
         spinner.classList.add('hidden');
-        btnText.textContent = "🎲 Generate Fun Writing Prompt";
+        btnText.textContent = "New Topic";
       }
     }
 
     function setExample(num) {
-      const input = document.getElementById('draftInput');
-      if (num === 1) {
-        input.value = "Ich gehe ?zu den? Bahnhof, weil ich habe keine Zeit.";
-      } else if (num === 2) {
-        input.value = "Ich helfe ?dem Mann?, weil ich heute Zeit habe.";
-      } else {
-        input.value = "Gestern bin ich mit meiner Schwester ins Kino gegangen.";
-      }
+      const lang = document.getElementById('languageSelect').value;
+      const set = EXAMPLES[lang] || EXAMPLES.de;
+      document.getElementById('draftInput').value = set[num] || set[1];
       resetDraftAttempt();
+    }
+
+    function focusCardQuote(idx) {
+      if (window._lastCards && window._lastCards[idx]) {
+        focusQuoteInDraft(window._lastCards[idx].quote);
+      }
     }
 
     function focusQuoteInDraft(quote) {
@@ -302,6 +481,7 @@ DEMO_HTML = """<!DOCTYPE html>
       if (!text) return;
 
       const level = document.getElementById('cefrSelect').value;
+      const lang = document.getElementById('languageSelect').value;
       const btn = document.getElementById('analyzeBtn');
       const btnText = document.getElementById('btnText');
       const spinner = document.getElementById('btnSpinner');
@@ -313,7 +493,7 @@ DEMO_HTML = """<!DOCTYPE html>
       const statusIndicator = document.getElementById('statusIndicator');
 
       btn.disabled = true;
-      btnText.textContent = "Analyzing...";
+      btnText.textContent = "Checking...";
       spinner.classList.remove('hidden');
       statusIndicator.classList.remove('hidden');
       notice.classList.add('hidden');
@@ -322,132 +502,136 @@ DEMO_HTML = """<!DOCTYPE html>
       cardsContainer.innerHTML = '';
 
       try {
+        const repairedPatterns = (isRevision && window._lastCards)
+          ? window._lastCards
+              .filter((_, idx) => !(window._revealedRung5 && window._revealedRung5.has(idx)))
+              .map(c => c.pattern_code)
+          : [];
+
         const response = await fetch('/ai/analyze-draft', {
           method: 'POST',
           headers: getHeaders(),
           body: JSON.stringify({
             sentence: text,
             target_level: level,
-            is_revision: isRevision
+            language: lang,
+            is_revision: isRevision,
+            repaired_patterns: repairedPatterns
           })
         });
 
         const data = await response.json();
-
         if (!response.ok) {
           throw new Error(data.message || data.detail || 'Analysis failed.');
         }
 
-        // Refresh ledger if logged in and this was an initial draft
-        if (!isRevision && document.getElementById('jwtInput').value.trim()) {
+        if (document.getElementById('jwtInput').value.trim()) {
           fetchWeaknesses();
         }
 
-        // Display confirmed inline '?' hypotheses if any
         if (data.confirmed_hypotheses && data.confirmed_hypotheses.length > 0) {
           const pills = data.confirmed_hypotheses.map(
-            h => `<code class="px-2 py-0.5 rounded bg-emerald-900/60 border border-emerald-600/50 text-emerald-200 font-mono">✓ ${h}</code>`
+            h => `<code class="px-1.5 py-0.5 rounded bg-white border border-emerald-200 text-emerald-800 font-mono text-xs">&#10003; ${escapeHtml(h)}</code>`
           ).join(' ');
-          confirmedBanner.innerHTML = `
-            <div class="font-semibold text-emerald-300">✅ Confirmed Inline Hypotheses (?...?):</div>
-            <div class="text-xs text-emerald-200/90 flex items-center gap-2 flex-wrap pt-1">
-              Your marked hypothesis was 100% grammatically correct: ${pills}
-            </div>
-          `;
+          confirmedBanner.innerHTML = `Confirmed correct: ${pills}`;
           confirmedBanner.classList.remove('hidden');
         }
 
-        // If 0 error cards -> Success!
         if (!data.cards || data.cards.length === 0) {
-          notice.className = "p-4 rounded-xl text-sm border bg-emerald-950/40 border-emerald-800/60 text-emerald-300 block";
-          if (isRevision) {
-            notice.innerHTML = `🎉 <strong>All errors resolved on Attempt #${attemptNumber}!</strong> Your self-correction succeeded. Click <strong>"🎲 Generate Fun Writing Prompt"</strong> above for your next challenge!`;
-          } else {
-            notice.innerHTML = "🎉 <strong>Clean draft on your first try!</strong> Zero grammatical errors detected.";
-          }
+          notice.className = "p-4 rounded-2xl text-sm border bg-emerald-50 border-emerald-200/80 text-emerald-900 block";
+          notice.innerHTML = isRevision
+            ? `<strong>All fixed on Attempt #${attemptNumber}!</strong> Great job correcting your sentence.`
+            : `<strong>Looks great!</strong> No grammar errors found.`;
           attemptNumber = 1;
           isRevision = false;
+          window._lastCards = [];
+          window._revealedRung5 = new Set();
           updateAttemptUI();
           return;
         }
 
-        // Errors were found -> Enter Revision Mode so the learner can edit & retry!
         attemptNumber += 1;
         isRevision = true;
         updateAttemptUI();
 
-        cardCount.textContent = `${data.cards.length} error card(s) remaining — edit your draft above to fix them!`;
+        cardCount.textContent = `${data.cards.length} ${data.cards.length === 1 ? 'issue' : 'issues'} found`;
         resultsSection.classList.remove('hidden');
 
+        window._lastCards = data.cards;
+        window._revealedRung5 = new Set();
+
         data.cards.forEach((card, idx) => {
-          const meta = TAXONOMY_DESCRIPTIONS[card.pattern_code] || { name: card.pattern_code, cefr: "?", hint: "Grammar category" };
-          const safeQuote = card.quote.replace(/'/g, "\\'");
+          const meta = TAXONOMY_DESCRIPTIONS[card.pattern_code] || { name: card.pattern_code, cefr: "?", hint: "" };
           const cardEl = document.createElement('div');
-          cardEl.className = "bg-slate-800/70 border border-slate-700/80 rounded-xl p-5 space-y-4 shadow-lg";
+          cardEl.className = "bg-white rounded-2xl border border-zinc-200/90 p-5 shadow-xs space-y-3.5";
 
           cardEl.innerHTML = `
-            <!-- Top Section: L1 & L2 (Underline) -->
-            <div class="flex items-start justify-between gap-4 flex-wrap">
+            <!-- L1 & L2 -->
+            <div class="flex items-start justify-between gap-3">
               <div class="space-y-1">
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-700 text-indigo-300 border border-indigo-400/20 font-mono">
-                    L1: Sentence ${card.sentence_index + 1}
-                  </span>
-                  <span class="text-xs text-slate-400">Underlined Error (L2):</span>
-                </div>
-                <div class="text-xl font-mono font-medium text-amber-300 underline decoration-wavy decoration-amber-500/80 underline-offset-4">
-                  "${card.quote}"
+                <span class="text-[11px] font-medium text-zinc-400">Sentence ${card.sentence_index + 1}</span>
+                <div class="text-base font-medium text-zinc-900">
+                  &ldquo;<span class="error-underline">${escapeHtml(card.quote)}</span>&rdquo;
                 </div>
               </div>
-              <button onclick="focusQuoteInDraft('${safeQuote}')" class="text-xs px-3 py-1.5 rounded-lg bg-slate-700/70 hover:bg-indigo-600/40 text-slate-200 border border-slate-600 transition flex items-center gap-1.5">
-                <span>✏️</span> Edit &amp; Fix in Draft
+              <button
+                type="button"
+                onclick="focusCardQuote(${idx})"
+                class="text-xs font-medium text-zinc-500 hover:text-zinc-900 px-2.5 py-1 rounded-lg hover:bg-zinc-100 transition shrink-0"
+              >
+                Highlight in text
               </button>
             </div>
 
-            <!-- Graduated Ladder Rungs -->
-            <div class="space-y-3 pt-2 border-t border-slate-700/40">
-              <!-- L3: Category Badge (Hidden initially) -->
-              <div id="rung3-${idx}" class="hidden-rung bg-slate-900/80 p-3.5 rounded-lg border border-sky-500/30 flex items-center justify-between gap-4 flex-wrap">
-                <div class="space-y-1">
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs font-semibold text-sky-400 uppercase tracking-wide">L3 &bull; Grammar Category Badge</span>
-                    <span class="px-2 py-0.5 rounded font-mono font-bold text-xs bg-sky-500/20 text-sky-300 border border-sky-500/40">
-                      ${card.pattern_code}
-                    </span>
-                    <span class="px-1.5 py-0.5 rounded font-mono text-xs bg-slate-800 text-slate-300 border border-slate-700">
-                      CEFR ${meta.cefr}
-                    </span>
-                  </div>
-                  <div class="text-sm font-medium text-white">${meta.name}</div>
-                  <div class="text-xs text-slate-400">${meta.hint}</div>
+            <!-- L3: Category (Hidden initially) -->
+            <div id="rung3-${idx}" class="hidden-rung pt-3 border-t border-zinc-100 space-y-2">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md font-mono text-xs font-medium bg-zinc-100 text-zinc-800">${escapeHtml(card.pattern_code)}</span>
+                  <span class="text-sm font-medium text-zinc-900">${escapeHtml(meta.name)}</span>
                 </div>
-                <button onclick="revealRung(${idx}, 4)" id="btnRung4-${idx}" class="shrink-0 text-xs px-3 py-2 rounded-md bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-500/40 transition">
-                  Still Stuck? &rarr; Reveal Rule Hint (L4)
+                <button
+                  type="button"
+                  id="btnRung4-${idx}"
+                  onclick="revealRung(${idx}, 4)"
+                  class="text-xs font-medium text-zinc-600 hover:text-zinc-900 px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200/70 transition"
+                >
+                  Show Hint &rarr;
                 </button>
               </div>
-
-              <!-- L4: Rule Hint (Hidden initially) -->
-              <div id="rung4-${idx}" class="hidden-rung bg-amber-500/10 p-4 rounded-lg border border-amber-500/30 space-y-2">
-                <div class="flex items-center justify-between gap-2 flex-wrap">
-                  <span class="text-xs font-semibold text-amber-300 uppercase tracking-wide">L4 &bull; Pedagogical Rule Hint (Zero Answer Leaks)</span>
-                  <button onclick="revealRung(${idx}, 5)" id="btnRung5-${idx}" class="text-xs px-3 py-1.5 rounded-md bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-500/40 transition">
-                    Give Up? &rarr; Reveal Target Rewrite (L5)
-                  </button>
-                </div>
-                <p class="text-sm text-slate-200 leading-relaxed font-sans">${card.explanation}</p>
-              </div>
-
-              <!-- L5: Clean Rewrite (Hidden initially) -->
-              <div id="rung5-${idx}" class="hidden-rung bg-emerald-500/10 p-4 rounded-lg border border-emerald-500/30 space-y-1.5">
-                <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wide block">L5 &bull; Target Correction (Final Clean Rewrite)</span>
-                <div class="text-lg font-mono font-bold text-emerald-300">${card.correction}</div>
-              </div>
+              <p class="text-xs text-zinc-500">${escapeHtml(meta.hint)}</p>
             </div>
 
-            <!-- Initial Action Button (Reveal L3) -->
+            <!-- L4: Rule Hint (Hidden initially) -->
+            <div id="rung4-${idx}" class="hidden-rung p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/60 space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-medium text-amber-800">Grammar Hint</span>
+                <button
+                  type="button"
+                  id="btnRung5-${idx}"
+                  onclick="revealRung(${idx}, 5)"
+                  class="text-xs font-medium text-amber-900 hover:underline"
+                >
+                  Show Answer &rarr;
+                </button>
+              </div>
+              <p class="text-sm text-zinc-800 leading-relaxed">${escapeHtml(card.explanation)}</p>
+            </div>
+
+            <!-- L5: Correction (Hidden initially) -->
+            <div id="rung5-${idx}" class="hidden-rung p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200/60 flex items-center justify-between gap-2">
+              <span class="text-xs font-medium text-emerald-800">Correction</span>
+              <span class="font-mono text-sm font-medium text-emerald-900">${escapeHtml(card.correction)}</span>
+            </div>
+
+            <!-- Initial Step Button -->
             <div id="initialBtnBox-${idx}" class="pt-1">
-              <button onclick="revealRung(${idx}, 3)" class="text-xs px-3.5 py-2 rounded-md bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 font-medium transition flex items-center gap-1.5">
-                <span>🏷️</span> Need a Clue? Reveal Category Badge (L3)
+              <button
+                type="button"
+                onclick="revealRung(${idx}, 3)"
+                class="text-xs font-medium text-zinc-600 hover:text-zinc-900 px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200/70 transition"
+              >
+                Show Grammar Category &rarr;
               </button>
             </div>
           `;
@@ -456,8 +640,8 @@ DEMO_HTML = """<!DOCTYPE html>
         });
 
       } catch (err) {
-        notice.className = "p-4 rounded-xl text-sm border bg-rose-950/40 border-rose-800/60 text-rose-300 block";
-        notice.textContent = `Error: ${err.message}`;
+        notice.className = "p-4 rounded-2xl text-sm border bg-rose-50 border-rose-200 text-rose-800 block";
+        notice.textContent = err.message;
       } finally {
         btn.disabled = false;
         updateAttemptUI();
@@ -468,9 +652,7 @@ DEMO_HTML = """<!DOCTYPE html>
 
     function revealRung(cardIdx, rungNumber) {
       const rungEl = document.getElementById(`rung${rungNumber}-${cardIdx}`);
-      if (rungEl) {
-        rungEl.classList.remove('hidden-rung');
-      }
+      if (rungEl) rungEl.classList.remove('hidden-rung');
       if (rungNumber === 3) {
         const initBox = document.getElementById(`initialBtnBox-${cardIdx}`);
         if (initBox) initBox.classList.add('hidden');
@@ -478,6 +660,8 @@ DEMO_HTML = """<!DOCTYPE html>
         const btn4 = document.getElementById(`btnRung4-${cardIdx}`);
         if (btn4) btn4.classList.add('hidden');
       } else if (rungNumber === 5) {
+        if (!window._revealedRung5) window._revealedRung5 = new Set();
+        window._revealedRung5.add(cardIdx);
         const btn5 = document.getElementById(`btnRung5-${cardIdx}`);
         if (btn5) btn5.classList.add('hidden');
       }

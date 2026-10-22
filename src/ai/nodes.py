@@ -1,5 +1,6 @@
 from typing import cast
 
+from src.ai.constants import TAXONOMY, Language
 from src.ai.llm import structured_critic_llm, structured_generator_llm
 from src.ai.prompts import build_critic_messages, build_generator_messages
 from src.ai.schema import Analysis, SemanticEvaluation
@@ -8,11 +9,13 @@ from src.ai.state import State
 
 async def generator(state: State):
     print("---Node Generator---")
+    language = state.get("language", Language.DE)
     messages = build_generator_messages(
         sentence=state["sentence"],
         critique=state["critique"],
         previous_analysis=state["analysis"],
         cefr_level=state.get("cefr_level"),
+        language=language,
     )
 
     result: Analysis = cast(Analysis, await structured_generator_llm.ainvoke(messages))
@@ -26,6 +29,7 @@ def deterministic_evaluator(state: State):
     if analysis is None:
         raise ValueError("Evaluator called before analysis was generated.")
 
+    expected_language = state.get("language", Language.DE)
     critiques: list[str] = []
 
     for i, card in enumerate(analysis.cards, start=1):
@@ -52,6 +56,14 @@ def deterministic_evaluator(state: State):
                 "If there is an error, the correction must differ from the quote."
             )
 
+        # Check 4: Language Taxonomy Check
+        card_lang = TAXONOMY[card.pattern_code]["language"]
+        if card_lang != expected_language:
+            critiques.append(
+                f"{card_label}: Pattern code '{card.pattern_code}' belongs to language '{card_lang}', "
+                f"but the draft language is '{expected_language}'. Choose a valid '{expected_language}' pattern code."
+            )
+
     if critiques:
         return {"is_valid": False, "critique": "\n".join(critiques)}
 
@@ -64,9 +76,11 @@ async def semantic_evaluator(state: State):
     if analysis is None:
         raise ValueError("Semantic evaluator called before analysis was generated.")
 
+    language = state.get("language", Language.DE)
     messages = build_critic_messages(
         sentence=state["sentence"],
         analysis=analysis,
+        language=language,
     )
 
     evaluation: SemanticEvaluation = cast(

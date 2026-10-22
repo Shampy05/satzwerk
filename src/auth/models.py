@@ -11,7 +11,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.ai.constants import CEFRLevel, PatternCode
+from src.ai.constants import CEFRLevel, Language, PatternCode
 from src.database import Base
 
 
@@ -25,6 +25,9 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255))
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     cefr_level: Mapped[CEFRLevel] = mapped_column(String(5), default=CEFRLevel.A1)
+    target_language: Mapped[Language] = mapped_column(
+        String(5), default=Language.DE, server_default="de"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

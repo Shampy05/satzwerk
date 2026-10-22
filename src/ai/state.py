@@ -1,6 +1,6 @@
 from typing import NotRequired, TypedDict
 
-from src.ai.constants import CEFRLevel
+from src.ai.constants import CEFRLevel, Language
 from src.ai.schema import Analysis
 
 
@@ -11,3 +11,4 @@ class State(TypedDict):
     is_valid: bool
     iterations: int
     cefr_level: NotRequired[CEFRLevel]
+    language: NotRequired[Language]
