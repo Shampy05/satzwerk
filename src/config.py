@@ -23,10 +23,17 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str | None = None
     EMAILS_FROM_EMAIL: str = "noreply@satzwerk.local"
 
-    OPENAI_LLM_MODEL: str = "gpt-5-nano"
-    CRITIC_LLM_MODEL: str = "gpt-4o-mini"
+    OPENAI_LLM_MODEL: str = "openai/gpt-4o-mini"
+    CRITIC_LLM_MODEL: str = "openai/gpt-4o-mini"
     LLM_TEMPERATURE: float = 1.0
     AI_MAX_ITERATIONS: int = 3
+
+    LANGCHAIN_TRACING_V2: str = "false"
+    LANGCHAIN_API_KEY: str | None = None
+    LANGCHAIN_PROJECT: str = "satzwerk"
+    OTEL_SERVICE_NAME: str = "satzwerk-api"
+    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: str | None = None
+    OTEL_EXPORTER_OTLP_ENDPOINT: str | None = None
 
 
 settings = Settings()  # pyright: ignore[reportCallIssue]

@@ -68,6 +68,7 @@ async def get_user_weaknesses(
     "/writing-prompt",
     response_model=WritingPromptResponse,
     status_code=status.HTTP_200_OK,
+    operation_id="get_writing_prompt_kebab",
 )
 async def get_writing_prompt(
     user: OptionalCurrentUser,

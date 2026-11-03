@@ -4,7 +4,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.ai.constants import CEFRLevel, Language, PatternCode
+from src.ai.constants import CEFRLevel, PatternCode
 from src.ai.schema import (
     Analysis,
     EnrichedAnalysis,
@@ -24,9 +24,7 @@ class TestOptionalUserRouter:
     async def test_analyze_draft_anonymous_guest(
         self, mock_analyze: AsyncMock, client: AsyncClient
     ):
-        mock_analyze.return_value = EnrichedAnalysis(
-            cards=[], confirmed_hypotheses=[]
-        )
+        mock_analyze.return_value = EnrichedAnalysis(cards=[], confirmed_hypotheses=[])
 
         response = await client.post(
             "/ai/analyze-draft",
@@ -44,9 +42,7 @@ class TestOptionalUserRouter:
     async def test_analyze_draft_authenticated_user(
         self, mock_analyze: AsyncMock, client: AsyncClient, verified_user: User
     ):
-        mock_analyze.return_value = EnrichedAnalysis(
-            cards=[], confirmed_hypotheses=[]
-        )
+        mock_analyze.return_value = EnrichedAnalysis(cards=[], confirmed_hypotheses=[])
         access_token, _ = create_tokens(subject=verified_user.id)
 
         response = await client.post(
@@ -66,9 +62,7 @@ class TestOptionalUserRouter:
     async def test_analyze_draft_with_target_level_override(
         self, mock_analyze: AsyncMock, client: AsyncClient, verified_user: User
     ):
-        mock_analyze.return_value = EnrichedAnalysis(
-            cards=[], confirmed_hypotheses=[]
-        )
+        mock_analyze.return_value = EnrichedAnalysis(cards=[], confirmed_hypotheses=[])
         access_token, _ = create_tokens(subject=verified_user.id)
 
         response = await client.post(
@@ -91,9 +85,7 @@ class TestOptionalUserRouter:
     async def test_analyze_draft_invalid_token_falls_back_to_guest(
         self, mock_analyze: AsyncMock, client: AsyncClient
     ):
-        mock_analyze.return_value = EnrichedAnalysis(
-            cards=[], confirmed_hypotheses=[]
-        )
+        mock_analyze.return_value = EnrichedAnalysis(cards=[], confirmed_hypotheses=[])
 
         response = await client.post(
             "/ai/analyze-draft",
@@ -406,7 +398,3 @@ class TestErrorLedgerAndPrompts:
             db_session, verified_user.id, CEFRLevel.B1
         )
         assert weaknesses_after == [PatternCode.WO_VF]
-
-
-
-

@@ -64,15 +64,23 @@ class PatternCode(StrEnum):
     FR_AUX = "FR-AUX"  # Auxiliary selection (être vs avoir in compound tenses)
     FR_PP = "FR-PP"  # Past participle formation & agreement (être / preceding direct object)
     FR_IMP = "FR-IMP"  # Passé composé vs Imparfait aspectual choice
-    FR_SUBJ = "FR-SUBJ"  # Subjonctif mood after triggers (il faut que, bien que, vouloir que)
-    FR_COND = "FR-COND"  # Conditionnel & si-clause sequence of tenses (concordance des temps)
+    FR_SUBJ = (
+        "FR-SUBJ"  # Subjonctif mood after triggers (il faut que, bien que, vouloir que)
+    )
+    FR_COND = (
+        "FR-COND"  # Conditionnel & si-clause sequence of tenses (concordance des temps)
+    )
     FR_REFL = "FR-REFL"  # Pronominal / reflexive verbs (se souvenir, s'appeler)
 
     # --- Syntax & Pronouns ---
-    FR_CLIT = "FR-CLIT"  # Clitic object pronouns & pre-verbal ordering (le/la/lui/leur/y/en)
+    FR_CLIT = (
+        "FR-CLIT"  # Clitic object pronouns & pre-verbal ordering (le/la/lui/leur/y/en)
+    )
     FR_NEG = "FR-NEG"  # Two-part negation placement (ne ... pas/jamais/rien/plus)
     FR_REL = "FR-REL"  # Relative pronouns (qui / que / dont / où / lequel)
-    FR_PREP = "FR-PREP"  # Prepositions & contractions (à/au/aux, de/du/des, en/dans/chez)
+    FR_PREP = (
+        "FR-PREP"  # Prepositions & contractions (à/au/aux, de/du/des, en/dans/chez)
+    )
     FR_INF = "FR-INF"  # Verb + infinitive government (à vs de vs bare infinitive)
 
     # --- Orthography & Register ---

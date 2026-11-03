@@ -25,6 +25,7 @@ from src.ai.state import State
 from src.ai.utils import locate_sentence
 from src.auth.models import UserErrorLedger
 from src.cache import valkey_client
+from src.observability import tracer
 
 DRAFT_CACHE_TTL_SECONDS = 86400
 
@@ -50,45 +51,54 @@ class AIService:
         if learner is None:
             learner = LearnerProfile()
 
-        cache_key = AIService._draft_cache_key(
-            sentence, learner.cefr_level, learner.language
-        )
-        analysis: Analysis | None = None
+        with tracer.start_as_current_span("ai.analyze_draft") as span:
+            span.set_attribute("ai.language", str(learner.language))
+            span.set_attribute("ai.cefr_level", str(learner.cefr_level))
+            span.set_attribute("ai.is_revision", is_revision)
 
-        try:
-            cached_payload = await valkey_client.get(cache_key)
-            if cached_payload:
-                analysis = Analysis.model_validate_json(cached_payload)
-        except (ValkeyError, ValidationError):
-            analysis = None
-
-        if analysis is None:
-            initial_state: State = {
-                "sentence": sentence,
-                "analysis": None,
-                "is_valid": False,
-                "critique": "",
-                "iterations": 0,
-                "cefr_level": learner.cefr_level,
-                "language": learner.language,
-            }
-
-            final_state: State = cast(State, await graph.ainvoke(initial_state))
-            analysis = final_state.get("analysis")
-
-            if not analysis or not final_state.get("is_valid"):
-                raise CardGenerationFailedException(
-                    message=f"Failed to generate a valid card after {final_state['iterations']} attempts."
-                )
+            cache_key = AIService._draft_cache_key(
+                sentence, learner.cefr_level, learner.language
+            )
+            analysis: Analysis | None = None
 
             try:
-                await valkey_client.set(
-                    cache_key,
-                    analysis.model_dump_json(),
-                    ex=DRAFT_CACHE_TTL_SECONDS,
-                )
-            except ValkeyError:
-                pass
+                cached_payload = await valkey_client.get(cache_key)
+                if cached_payload:
+                    analysis = Analysis.model_validate_json(cached_payload)
+            except (ValkeyError, ValidationError):
+                analysis = None
+
+            span.set_attribute("ai.cache_hit", analysis is not None)
+
+            if analysis is None:
+                initial_state: State = {
+                    "sentence": sentence,
+                    "analysis": None,
+                    "is_valid": False,
+                    "critique": "",
+                    "iterations": 0,
+                    "cefr_level": learner.cefr_level,
+                    "language": learner.language,
+                }
+
+                final_state: State = cast(State, await graph.ainvoke(initial_state))
+                span.set_attribute("ai.iterations", final_state.get("iterations", 0))
+                analysis = final_state.get("analysis")
+
+                if not analysis or not final_state.get("is_valid"):
+                    raise CardGenerationFailedException(
+                        message=f"Failed to generate a valid card after {final_state['iterations']} attempts."
+                    )
+
+                try:
+                    await valkey_client.set(
+                        cache_key,
+                        analysis.model_dump_json(),
+                        ex=DRAFT_CACHE_TTL_SECONDS,
+                    )
+                except ValkeyError:
+                    pass
+            span.set_attribute("ai.cards_count", len(analysis.cards))
 
         if learner.user_id is not None and db is not None:
             if not is_revision and analysis.cards:

@@ -45,7 +45,7 @@ clean: ## Remove caches and build artifacts (keeps .venv)
 # ---- Development server ----
 
 dev: ## Run the FastAPI server in development mode with hot-reloading
-	uv run uvicorn src.main:app --reload --port 8000
+	uv run uvicorn src.main:app --env-file .env --reload --port 8000
 
 # ---- Infrastructure ----
 

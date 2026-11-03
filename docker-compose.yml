@@ -1,4 +1,28 @@
 services:
+  api:
+    build: .
+    container_name: satzwerk_api
+    ports:
+      - 8000:8000
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/satzwerk
+      - VALKEY_URL=valkey://valkey:6379
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://jaeger:4318/v1/traces
+    depends_on:
+      - postgres
+      - valkey
+      - jaeger
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: satzwerk_jaeger
+    restart: always
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"
+      - "4318:4318"
   postgres:
     image: postgres:15-alpine
     container_name: satzwerk_postgres

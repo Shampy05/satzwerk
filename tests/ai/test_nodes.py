@@ -167,5 +167,3 @@ def test_evaluator_rejects_cross_language_taxonomy_code():
     result = deterministic_evaluator(state)
     assert result["is_valid"] is False
     assert "belongs to language 'de'" in result["critique"]
-
-
